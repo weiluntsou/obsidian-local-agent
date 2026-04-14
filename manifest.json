@@ -1,0 +1,9 @@
+{
+  "id": "obsidian-local-agent",
+  "name": "Obsidian Local Agent",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Interfaces with local LLMs (Ollama/LM Studio) for automated background knowledge management: tagging, classification, and map-reduce aggregation.",
+  "author": "Local Agent",
+  "isDesktopOnly": true
+}
