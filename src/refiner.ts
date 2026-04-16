@@ -2,59 +2,59 @@ import { App, TFile, Notice, normalizePath } from "obsidian";
 import { LocalLLMClient, parseJsonFromLLM } from "./api";
 
 const PILLARS = [
-  "10_Work_&_Management",
-  "20_Academic_CS",
-  "30_Life_&_Creations",
-  "40_Self_Hosted_Lab",
-  "00_Inbox"
+  "10_工作與管理",
+  "20_學術與電腦科學",
+  "30_生活與創作",
+  "40_自託管實驗室",
+  "00_收件箱"
 ];
 
-const REFINER_SYSTEM_PROMPT = `You are an expert knowledge refiner and summarisation engine. Your job is to process raw notes and articles, and extract the highest quality signal from the noise.
+const REFINER_SYSTEM_PROMPT = `你是一位專業的知識精修與摘要引擎。你的職責是處理原始筆記和文章，從中萃取最高品質的資訊信號。
 
-You will output exactly ONE structured JSON object. Read the input note carefully and perform these four operations:
+你必須輸出恰好一個結構化的 JSON（JSON 資料格式）物件。請仔細閱讀輸入的筆記，並執行以下四個操作：
 
-1. SUMMARY: Provide a concise summary of the core idea.
-2. KEYWORDS: Extract key technical terms and provide an English-to-Traditional Chinese glossary. If the original text is already in Chinese, you can ignore this or provide English terms for Chinese concepts.
-3. HIGHLIGHTS: Extract ONLY the highly valuable, useful paragraphs or sentences. Rewrite them clearly. Remove all boilerplate, fluff, and unnecessary context.
-4. ATOMIZATION: If there are distinct, highly valuable techniques, concepts, or mental models (e.g. a specific "Thread Management" trick), extract them into separate atomic notes.
-5. CLASSIFICATION: Classify the content into exactly ONE of the Five Pillars.
+1. 摘要（SUMMARY）：提供對核心概念的簡潔摘要。
+2. 關鍵詞彙（KEYWORDS）：提取技術用語（technical terms），並提供英文至繁體中文的詞彙對照表。如果原始文本已為中文，可略過此步或提供中文概念的英文譯詞。
+3. 重點提取（HIGHLIGHTS）：謹挑選高價值、有實用性的段落或句子。重新清晰地改寫，去除所有樣板文本、冗餘內容和不必要的背景說明。
+4. 原子化概念（ATOMIZATION）：如果文章中包含不同的、高價值的技巧、概念或思維模型（例如：特定的「執行緒管理（Thread Management）」技巧），請將其萃取為獨立的原子化筆記。
+5. 分類（CLASSIFICATION）：將內容分類到五大支柱（Five Pillars）中的恰好一個。
 
-Five Pillars:
-- 10_Work_&_Management
-- 20_Academic_CS
-- 30_Life_&_Creations
-- 40_Self_Hosted_Lab
-- 00_Inbox
+五大支柱：
+- 10_工作與管理
+- 20_學術與電腦科學
+- 30_生活與創作
+- 40_自託管實驗室
+- 00_收件箱
 
-Expected JSON structure:
+預期的 JSON 結構：
 {
-  "summary": "Concise summary...",
+  "summary": "簡潔摘要...",
   "keywords": [
-    { "en": "English Term", "zh": "Traditional Chinese Translation" }
+    { "en": "English Term", "zh": "繁體中文翻譯" }
   ],
   "highlights": [
-    "Useful paragraph 1...",
-    "Useful paragraph 2..."
+    "高價值段落 1...",
+    "高價值段落 2..."
   ],
   "atomicNotes": [
     {
-      "title": "Specific Concept Name",
-      "content": "Detailed explanation of the concept...",
-      "tags": ["#tag1", "#tag2"]
+      "title": "特定概念名稱",
+      "content": "對該概念的詳細解釋...",
+      "tags": ["#標籤1", "#標籤2"]
     }
   ],
-  "category": "20_Academic_CS",
-  "tags": ["#tag1", "#tag2", "#tag3"],
+  "category": "20_學術與電腦科學",
+  "tags": ["#標籤1", "#標籤2", "#標籤3"],
   "confidence": 0.95
 }
 
-Rules:
-1. "category" MUST exactly match one of the Five Pillars.
-2. "tags" should contain 3-5 sub-topics.
-3. Be highly selective with highlights. If the whole text is garbage, "highlights" can be empty.
-4. "atomicNotes" should only contain highly specific, reusable insights. Do not force it if there are no distinct concepts.
-5. All text in "summary", "keywords" (zh), "highlights", and "atomicNotes.content" should be in Traditional Chinese (zh-TW).
-6. Do NOT include markdown fences, code blocks, or text outside the JSON object. Just valid JSON.`;
+規則：
+1. "category" 必須精確符合五大支柱中的其中一個。
+2. "tags" 應包含 3 至 5 個子主題。
+3. 在選擇重點提取時要評選謹慎。如果整篇文本毫無價值，"highlights" 可以為空。
+4. "atomicNotes" 應只包含高度具體且可重複使用的洞見。如無不同的概念，不強行建立。
+5. 「摘要」、「關鍵詞彙」（中文部分）、「重點提取」和「原子化筆記.內容」中的所有文本必須為繁體中文（zh-TW）。
+6. 不可包含 Markdown 代碼區塊（markdown fences）、代碼片段或 JSON 物件外的任何文字。必須為有效的 JSON（valid JSON）。`;
 
 interface RefinerResult {
   summary: string;
@@ -79,11 +79,11 @@ export class NoteRefinerEngine {
       const bodyContent = this.stripFrontmatter(originalContent);
 
       if (bodyContent.trim().length === 0) {
-        new Notice("Note is empty. Nothing to refine.");
+        new Notice("筆記為空。沒有內容需要精修。");
         return;
       }
 
-      new Notice(`Refining "${file.basename}"... This might take a while.`);
+      new Notice(`正在精修「${file.basename}」...這可能需要一些時間。`);
 
       const rawResponse = await this.apiClient.prompt(
         REFINER_SYSTEM_PROMPT,
@@ -94,7 +94,7 @@ export class NoteRefinerEngine {
       const parsed = parseJsonFromLLM<RefinerResult>(rawResponse);
 
       if (!parsed || !parsed.summary || !Array.isArray(parsed.highlights)) {
-        new Notice("LLM returned unexpected JSON structure. Check console.");
+        new Notice("大型語言模型（LLM）回傳的 JSON 結構非預期。請檢查主控台。");
         console.error("[NoteRefinerEngine] Invalid response:", rawResponse);
         return;
       }
@@ -117,7 +117,7 @@ export class NoteRefinerEngine {
       // 3. Update the original note (replace content, update frontmatter)
       let finalCategory = parsed.category;
       if (!PILLARS.includes(finalCategory)) {
-        finalCategory = "00_Inbox";
+        finalCategory = "00_收件箱";
       }
 
       const tagsToAdd = [...(parsed.tags || [])];
@@ -127,7 +127,7 @@ export class NoteRefinerEngine {
         tagsToAdd.push("#AI-Uncertain");
       } else {
         const parentPath = file.parent?.path || "";
-        if (parentPath === "00_Inbox" && finalCategory !== "00_Inbox") {
+        if (parentPath === "00_收件箱" && finalCategory !== "00_收件箱") {
           shouldMove = true;
         }
       }
@@ -153,14 +153,14 @@ export class NoteRefinerEngine {
       // 4. Move file if needed
       if (shouldMove) {
         await this.moveFileToCategory(file, finalCategory);
-        new Notice(`Refined & moved to ${finalCategory}`);
+        new Notice(`精修完成並已移動到 ${finalCategory}`);
       } else {
-        new Notice(`Refinement complete.`);
+        new Notice(`精修完成。`);
       }
 
     } catch (err) {
       console.error("[NoteRefinerEngine] Error processing file:", err);
-      new Notice(`Refinement failed: ${(err as Error).message}`);
+      new Notice(`精修失敗：${(err as Error).message}`);
     }
   }
 
@@ -168,13 +168,13 @@ export class NoteRefinerEngine {
     const parts: string[] = [];
 
     // 1. Summary Block
-    parts.push(`> [!summary] Summary`);
+    parts.push(`> [!summary] 摘要`);
     parts.push(`> ${parsed.summary.replace(/\\n/g, "\\n> ")}`);
     parts.push(``);
 
     // 2. Keywords Glossary
     if (parsed.keywords && Array.isArray(parsed.keywords) && parsed.keywords.length > 0) {
-      parts.push(`> [!info] 關鍵字對照表 (Keywords)`);
+      parts.push(`> [!info] 關鍵詞彙對照表（Keywords 英文至繁體中文）`);
       for (const kw of parsed.keywords) {
         parts.push(`> - **${kw.en}**: ${kw.zh}`);
       }
@@ -182,20 +182,20 @@ export class NoteRefinerEngine {
     }
 
     // 3. Highlights
-    parts.push(`## Highlights (高亮)`);
+    parts.push(`## 重點提取`);
     if (parsed.highlights.length > 0) {
       for (const hl of parsed.highlights) {
         parts.push(`${hl}`);
         parts.push(``);
       }
     } else {
-      parts.push(`*(No specific useful paragraphs extracted)*`);
+      parts.push(`*（未發現特定有用段落）*`);
       parts.push(``);
     }
 
     // 4. Atomic Links
     if (atomicLinks.length > 0) {
-      parts.push(`## 原子化筆記 (Atomic Concepts)`);
+      parts.push(`## 原子化概念筆記`);
       for (const link of atomicLinks) {
         parts.push(`- ${link}`);
       }
@@ -216,7 +216,7 @@ export class NoteRefinerEngine {
     try {
       let finalCategory = category;
       if (!PILLARS.includes(finalCategory)) {
-         finalCategory = "00_Inbox";
+         finalCategory = "00_收件箱";
       }
 
       const destFolder = normalizePath(finalCategory);

@@ -217,31 +217,31 @@ var LocalLLMClient = class {
 // src/classifier.ts
 var import_obsidian2 = require("obsidian");
 var PILLARS = [
-  "10_Work_&_Management",
-  "20_Academic_CS",
-  "30_Life_&_Creations",
-  "40_Self_Hosted_Lab",
-  "00_Inbox"
+  "10_\u5DE5\u4F5C\u8207\u7BA1\u7406",
+  "20_\u5B78\u8853\u8207\u96FB\u8166\u79D1\u5B78",
+  "30_\u751F\u6D3B\u8207\u5275\u4F5C",
+  "40_\u81EA\u8A17\u7BA1\u5BE6\u9A57\u5BA4",
+  "00_\u6536\u4EF6\u7BB1"
 ];
-var CLASSIFICATION_SYSTEM_PROMPT = `You are a highly precise classification engine. Organize knowledge into ONE of the following Five Pillars exact names:
-- 10_Work_&_Management: Content related to team leading, meetings, project management, and professional networking.
-- 20_Academic_CS: Content related to Computer Science degree studies, UoPeople assignments, and technical learning.
-- 30_Life_&_Creations: Content related to food blogging (local delicacies in central Taiwan/Japan), travel plans, and personal hobbies.
-- 40_Self_Hosted_Lab: Content related to home server setup (Mac Mini 2011), Docker, self-hosted services, and AI tool testing.
-- 00_Inbox: The default fallback if no strong match is found.
+var CLASSIFICATION_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u500B\u6975\u5EA6\u7CBE\u78BA\u7684\u5206\u985E\u5F15\u64CE\u3002\u8ACB\u5C07\u77E5\u8B58\u7D44\u7E54\u5230\u4EE5\u4E0B\u300C\u4E94\u5927\u652F\u67F1\uFF08Five Pillars\uFF09\u300D\u4E2D\u7684\u5176\u4E2D\u4E00\u500B\uFF1A
+- 10_\u5DE5\u4F5C\u8207\u7BA1\u7406\uFF1A\u5718\u968A\u5E36\u9818\u3001\u6703\u8B70\u3001\u5C08\u6848\u7BA1\u7406\uFF08project management\uFF09\u3001\u8077\u5834\u4EBA\u969B\u95DC\u4FC2\u76F8\u95DC\u5167\u5BB9\u3002
+- 20_\u5B78\u8853\u8207\u96FB\u8166\u79D1\u5B78\uFF1A\u96FB\u8166\u79D1\u5B78\u5B78\u4F4D\u3001\u5927\u5B78\u8AB2\u7A0B\u4F5C\u696D\u3001\u7A0B\u5F0F\u958B\u767C\uFF08programming\uFF09\u3001\u6280\u8853\u5B78\u7FD2\u76F8\u95DC\u5167\u5BB9\u3002
+- 30_\u751F\u6D3B\u8207\u5275\u4F5C\uFF1A\u7F8E\u98DF\u90E8\u843D\u683C\uFF08\u53F0\u7063\u4E2D\u90E8\u3001\u65E5\u672C\u5728\u5730\u7F8E\u98DF\uFF09\u3001\u65C5\u904A\u898F\u5283\u3001\u500B\u4EBA\u8208\u8DA3\u548C\u5275\u4F5C\u76F8\u95DC\u5167\u5BB9\u3002
+- 40_\u81EA\u8A17\u7BA1\u5BE6\u9A57\u5BA4\uFF1A\u5BB6\u7528\u4F3A\u670D\u5668\u8A2D\u7F6E\uFF08Mac Mini 2011\uFF09\u3001Docker \u5BB9\u5668\u5316\uFF08containerization\uFF09\u3001\u81EA\u8A17\u7BA1\u670D\u52D9\u3001\u4EBA\u5DE5\u667A\u6167\uFF08AI\uFF09\u5DE5\u5177\u6E2C\u8A66\u76F8\u95DC\u5167\u5BB9\u3002
+- 00_\u6536\u4EF6\u7BB1\uFF1A\u7576\u5167\u5BB9\u7121\u6CD5\u5F37\u70C8\u5339\u914D\u4EFB\u4F55\u5206\u985E\u6642\u7684\u9810\u8A2D\u5206\u985E\u3002
 
-You MUST respond with valid JSON only. Keep the response exactly in this schema:
+\u4F60\u5FC5\u9808\u53EA\u56DE\u61C9\u6709\u6548\u7684 JSON\uFF08valid JSON\uFF09\u683C\u5F0F\u3002\u8ACB\u7CBE\u78BA\u9075\u5FAA\u4EE5\u4E0B\u7D50\u69CB\u56DE\u61C9\uFF1A
 {
-  "category": "<one of the five exact folder names above>",
-  "tags": ["<tag1>", "<tag2>", "<tag3>"],
-  "confidence": <float between 0.0 and 1.0>
+  "category": "<\u4E0A\u8FF0\u4E94\u5927\u652F\u67F1\u4E2D\u7684\u5176\u4E2D\u4E00\u500B>",
+  "tags": ["<\u6A19\u7C641>", "<\u6A19\u7C642>", "<\u6A19\u7C643>"],
+  "confidence": <\u4ECB\u65BC 0.0 \u548C 1.0 \u4E4B\u9593\u7684\u6D6E\u9EDE\u6578>
 }
 
-Rules:
-1. "category" MUST exactly match one of the Five Pillars.
-2. "tags" must contain 3-5 specific sub-topics (e.g., "#Docker", "#NantouFood").
-3. "confidence" must reflect your certainty.
-4. Do NOT include markdown fences, code blocks, or text outside the JSON object.`;
+\u898F\u5247\uFF1A
+1. "category" \u5FC5\u9808\u5B8C\u5168\u7B26\u5408\u4E94\u5927\u652F\u67F1\u4E2D\u7684\u5176\u4E2D\u4E00\u500B\u3002
+2. "tags" \u5FC5\u9808\u5305\u542B 3 \u81F3 5 \u500B\u5177\u9AD4\u7684\u5B50\u4E3B\u984C\u3002\u4F8B\u5982\uFF1A\u300C#Docker\u300D\u3001\u300C#\u5357\u6295\u7F8E\u98DF\u300D\u3002
+3. "confidence" \u5FC5\u9808\u53CD\u6620\u4F60\u7684\u78BA\u5B9A\u7A0B\u5EA6\u3002
+4. \u4E0D\u53EF\u5305\u542B Markdown \u4EE3\u78BC\u5340\u584A\uFF08markdown fences\uFF09\u6216 JSON \u7269\u4EF6\u5916\u7684\u4EFB\u4F55\u6587\u5B57\u3002`;
 var ClassificationEngine = class {
   constructor(app, apiClient, classificationTemperature) {
     this.app = app;
@@ -254,10 +254,10 @@ var ClassificationEngine = class {
       const content = await this.app.vault.read(file);
       const bodyContent = this.stripFrontmatter(content);
       if (bodyContent.includes("%% AI_Classified_at:")) {
-        new import_obsidian2.Notice(`File "${file.basename}" is already classified.`);
+        new import_obsidian2.Notice(`\u6A94\u6848\u300C${file.basename}\u300D\u5DF2\u7D93\u5206\u985E\u904E\u3002`);
         return;
       }
-      new import_obsidian2.Notice(`Classifying "${file.basename}"...`);
+      new import_obsidian2.Notice(`\u6B63\u5728\u5206\u985E\u300C${file.basename}\u300D...`);
       const rawResponse = await this.apiClient.prompt(
         CLASSIFICATION_SYSTEM_PROMPT,
         bodyContent,
@@ -265,7 +265,7 @@ var ClassificationEngine = class {
       );
       const parsed = parseJsonFromLLM(rawResponse);
       if (!parsed || typeof parsed.category !== "string" || !Array.isArray(parsed.tags) || typeof parsed.confidence !== "number") {
-        new import_obsidian2.Notice("LLM returned unexpected JSON structure. Check console.");
+        new import_obsidian2.Notice("\u5927\u578B\u8A9E\u8A00\u6A21\u578B\uFF08LLM\uFF09\u56DE\u50B3\u7684 JSON \u7D50\u69CB\u975E\u9810\u671F\u3002\u8ACB\u6AA2\u67E5\u4E3B\u63A7\u53F0\u3002");
         console.error("[ClassificationEngine] Invalid response:", rawResponse);
         return;
       }
@@ -297,17 +297,17 @@ var ClassificationEngine = class {
       await this.app.vault.append(file, comment);
       if (shouldMove) {
         await this.moveFileToCategory(file, finalCategory);
-        new import_obsidian2.Notice(`Note moved to ${finalCategory}`);
+        new import_obsidian2.Notice(`\u7B46\u8A18\u5DF2\u79FB\u52D5\u5230 ${finalCategory}`);
       } else {
         if (confidence < 0.7) {
-          new import_obsidian2.Notice(`Classification complete (low confidence). Kept as Inbox/Uncertain.`);
+          new import_obsidian2.Notice(`\u5206\u985E\u5B8C\u6210\uFF08\u4FE1\u5FC3\u5EA6\uFF08confidence\uFF09\u4E0D\u8DB3\uFF09\u3002\u4FDD\u7559\u5728\u6536\u4EF6\u7BB1/\u672A\u78BA\u5B9A\u72C0\u614B\u3002`);
         } else {
-          new import_obsidian2.Notice(`Classification complete.`);
+          new import_obsidian2.Notice(`\u5206\u985E\u5B8C\u6210\u3002`);
         }
       }
     } catch (err) {
       console.error("[ClassificationEngine] Error processing file:", err);
-      new import_obsidian2.Notice(`Classification failed: ${err.message}`);
+      new import_obsidian2.Notice(`\u5206\u985E\u5931\u6557\uFF1A${err.message}`);
     }
   }
   async moveFileToCategory(file, category) {
@@ -328,58 +328,58 @@ var ClassificationEngine = class {
 // src/refiner.ts
 var import_obsidian3 = require("obsidian");
 var PILLARS2 = [
-  "10_Work_&_Management",
-  "20_Academic_CS",
-  "30_Life_&_Creations",
-  "40_Self_Hosted_Lab",
-  "00_Inbox"
+  "10_\u5DE5\u4F5C\u8207\u7BA1\u7406",
+  "20_\u5B78\u8853\u8207\u96FB\u8166\u79D1\u5B78",
+  "30_\u751F\u6D3B\u8207\u5275\u4F5C",
+  "40_\u81EA\u8A17\u7BA1\u5BE6\u9A57\u5BA4",
+  "00_\u6536\u4EF6\u7BB1"
 ];
-var REFINER_SYSTEM_PROMPT = `You are an expert knowledge refiner and summarisation engine. Your job is to process raw notes and articles, and extract the highest quality signal from the noise.
+var REFINER_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u5C08\u696D\u7684\u77E5\u8B58\u7CBE\u4FEE\u8207\u6458\u8981\u5F15\u64CE\u3002\u4F60\u7684\u8077\u8CAC\u662F\u8655\u7406\u539F\u59CB\u7B46\u8A18\u548C\u6587\u7AE0\uFF0C\u5F9E\u4E2D\u8403\u53D6\u6700\u9AD8\u54C1\u8CEA\u7684\u8CC7\u8A0A\u4FE1\u865F\u3002
 
-You will output exactly ONE structured JSON object. Read the input note carefully and perform these four operations:
+\u4F60\u5FC5\u9808\u8F38\u51FA\u6070\u597D\u4E00\u500B\u7D50\u69CB\u5316\u7684 JSON\uFF08JSON \u8CC7\u6599\u683C\u5F0F\uFF09\u7269\u4EF6\u3002\u8ACB\u4ED4\u7D30\u95B1\u8B80\u8F38\u5165\u7684\u7B46\u8A18\uFF0C\u4E26\u57F7\u884C\u4EE5\u4E0B\u56DB\u500B\u64CD\u4F5C\uFF1A
 
-1. SUMMARY: Provide a concise summary of the core idea.
-2. KEYWORDS: Extract key technical terms and provide an English-to-Traditional Chinese glossary. If the original text is already in Chinese, you can ignore this or provide English terms for Chinese concepts.
-3. HIGHLIGHTS: Extract ONLY the highly valuable, useful paragraphs or sentences. Rewrite them clearly. Remove all boilerplate, fluff, and unnecessary context.
-4. ATOMIZATION: If there are distinct, highly valuable techniques, concepts, or mental models (e.g. a specific "Thread Management" trick), extract them into separate atomic notes.
-5. CLASSIFICATION: Classify the content into exactly ONE of the Five Pillars.
+1. \u6458\u8981\uFF08SUMMARY\uFF09\uFF1A\u63D0\u4F9B\u5C0D\u6838\u5FC3\u6982\u5FF5\u7684\u7C21\u6F54\u6458\u8981\u3002
+2. \u95DC\u9375\u8A5E\u5F59\uFF08KEYWORDS\uFF09\uFF1A\u63D0\u53D6\u6280\u8853\u7528\u8A9E\uFF08technical terms\uFF09\uFF0C\u4E26\u63D0\u4F9B\u82F1\u6587\u81F3\u7E41\u9AD4\u4E2D\u6587\u7684\u8A5E\u5F59\u5C0D\u7167\u8868\u3002\u5982\u679C\u539F\u59CB\u6587\u672C\u5DF2\u70BA\u4E2D\u6587\uFF0C\u53EF\u7565\u904E\u6B64\u6B65\u6216\u63D0\u4F9B\u4E2D\u6587\u6982\u5FF5\u7684\u82F1\u6587\u8B6F\u8A5E\u3002
+3. \u91CD\u9EDE\u63D0\u53D6\uFF08HIGHLIGHTS\uFF09\uFF1A\u8B39\u6311\u9078\u9AD8\u50F9\u503C\u3001\u6709\u5BE6\u7528\u6027\u7684\u6BB5\u843D\u6216\u53E5\u5B50\u3002\u91CD\u65B0\u6E05\u6670\u5730\u6539\u5BEB\uFF0C\u53BB\u9664\u6240\u6709\u6A23\u677F\u6587\u672C\u3001\u5197\u9918\u5167\u5BB9\u548C\u4E0D\u5FC5\u8981\u7684\u80CC\u666F\u8AAA\u660E\u3002
+4. \u539F\u5B50\u5316\u6982\u5FF5\uFF08ATOMIZATION\uFF09\uFF1A\u5982\u679C\u6587\u7AE0\u4E2D\u5305\u542B\u4E0D\u540C\u7684\u3001\u9AD8\u50F9\u503C\u7684\u6280\u5DE7\u3001\u6982\u5FF5\u6216\u601D\u7DAD\u6A21\u578B\uFF08\u4F8B\u5982\uFF1A\u7279\u5B9A\u7684\u300C\u57F7\u884C\u7DD2\u7BA1\u7406\uFF08Thread Management\uFF09\u300D\u6280\u5DE7\uFF09\uFF0C\u8ACB\u5C07\u5176\u8403\u53D6\u70BA\u7368\u7ACB\u7684\u539F\u5B50\u5316\u7B46\u8A18\u3002
+5. \u5206\u985E\uFF08CLASSIFICATION\uFF09\uFF1A\u5C07\u5167\u5BB9\u5206\u985E\u5230\u4E94\u5927\u652F\u67F1\uFF08Five Pillars\uFF09\u4E2D\u7684\u6070\u597D\u4E00\u500B\u3002
 
-Five Pillars:
-- 10_Work_&_Management
-- 20_Academic_CS
-- 30_Life_&_Creations
-- 40_Self_Hosted_Lab
-- 00_Inbox
+\u4E94\u5927\u652F\u67F1\uFF1A
+- 10_\u5DE5\u4F5C\u8207\u7BA1\u7406
+- 20_\u5B78\u8853\u8207\u96FB\u8166\u79D1\u5B78
+- 30_\u751F\u6D3B\u8207\u5275\u4F5C
+- 40_\u81EA\u8A17\u7BA1\u5BE6\u9A57\u5BA4
+- 00_\u6536\u4EF6\u7BB1
 
-Expected JSON structure:
+\u9810\u671F\u7684 JSON \u7D50\u69CB\uFF1A
 {
-  "summary": "Concise summary...",
+  "summary": "\u7C21\u6F54\u6458\u8981...",
   "keywords": [
-    { "en": "English Term", "zh": "Traditional Chinese Translation" }
+    { "en": "English Term", "zh": "\u7E41\u9AD4\u4E2D\u6587\u7FFB\u8B6F" }
   ],
   "highlights": [
-    "Useful paragraph 1...",
-    "Useful paragraph 2..."
+    "\u9AD8\u50F9\u503C\u6BB5\u843D 1...",
+    "\u9AD8\u50F9\u503C\u6BB5\u843D 2..."
   ],
   "atomicNotes": [
     {
-      "title": "Specific Concept Name",
-      "content": "Detailed explanation of the concept...",
-      "tags": ["#tag1", "#tag2"]
+      "title": "\u7279\u5B9A\u6982\u5FF5\u540D\u7A31",
+      "content": "\u5C0D\u8A72\u6982\u5FF5\u7684\u8A73\u7D30\u89E3\u91CB...",
+      "tags": ["#\u6A19\u7C641", "#\u6A19\u7C642"]
     }
   ],
-  "category": "20_Academic_CS",
-  "tags": ["#tag1", "#tag2", "#tag3"],
+  "category": "20_\u5B78\u8853\u8207\u96FB\u8166\u79D1\u5B78",
+  "tags": ["#\u6A19\u7C641", "#\u6A19\u7C642", "#\u6A19\u7C643"],
   "confidence": 0.95
 }
 
-Rules:
-1. "category" MUST exactly match one of the Five Pillars.
-2. "tags" should contain 3-5 sub-topics.
-3. Be highly selective with highlights. If the whole text is garbage, "highlights" can be empty.
-4. "atomicNotes" should only contain highly specific, reusable insights. Do not force it if there are no distinct concepts.
-5. All text in "summary", "keywords" (zh), "highlights", and "atomicNotes.content" should be in Traditional Chinese (zh-TW).
-6. Do NOT include markdown fences, code blocks, or text outside the JSON object. Just valid JSON.`;
+\u898F\u5247\uFF1A
+1. "category" \u5FC5\u9808\u7CBE\u78BA\u7B26\u5408\u4E94\u5927\u652F\u67F1\u4E2D\u7684\u5176\u4E2D\u4E00\u500B\u3002
+2. "tags" \u61C9\u5305\u542B 3 \u81F3 5 \u500B\u5B50\u4E3B\u984C\u3002
+3. \u5728\u9078\u64C7\u91CD\u9EDE\u63D0\u53D6\u6642\u8981\u8A55\u9078\u8B39\u614E\u3002\u5982\u679C\u6574\u7BC7\u6587\u672C\u6BEB\u7121\u50F9\u503C\uFF0C"highlights" \u53EF\u4EE5\u70BA\u7A7A\u3002
+4. "atomicNotes" \u61C9\u53EA\u5305\u542B\u9AD8\u5EA6\u5177\u9AD4\u4E14\u53EF\u91CD\u8907\u4F7F\u7528\u7684\u6D1E\u898B\u3002\u5982\u7121\u4E0D\u540C\u7684\u6982\u5FF5\uFF0C\u4E0D\u5F37\u884C\u5EFA\u7ACB\u3002
+5. \u300C\u6458\u8981\u300D\u3001\u300C\u95DC\u9375\u8A5E\u5F59\u300D\uFF08\u4E2D\u6587\u90E8\u5206\uFF09\u3001\u300C\u91CD\u9EDE\u63D0\u53D6\u300D\u548C\u300C\u539F\u5B50\u5316\u7B46\u8A18.\u5167\u5BB9\u300D\u4E2D\u7684\u6240\u6709\u6587\u672C\u5FC5\u9808\u70BA\u7E41\u9AD4\u4E2D\u6587\uFF08zh-TW\uFF09\u3002
+6. \u4E0D\u53EF\u5305\u542B Markdown \u4EE3\u78BC\u5340\u584A\uFF08markdown fences\uFF09\u3001\u4EE3\u78BC\u7247\u6BB5\u6216 JSON \u7269\u4EF6\u5916\u7684\u4EFB\u4F55\u6587\u5B57\u3002\u5FC5\u9808\u70BA\u6709\u6548\u7684 JSON\uFF08valid JSON\uFF09\u3002`;
 var NoteRefinerEngine = class {
   constructor(app, apiClient, temperature) {
     this.app = app;
@@ -392,10 +392,10 @@ var NoteRefinerEngine = class {
       const originalContent = await this.app.vault.read(file);
       const bodyContent = this.stripFrontmatter(originalContent);
       if (bodyContent.trim().length === 0) {
-        new import_obsidian3.Notice("Note is empty. Nothing to refine.");
+        new import_obsidian3.Notice("\u7B46\u8A18\u70BA\u7A7A\u3002\u6C92\u6709\u5167\u5BB9\u9700\u8981\u7CBE\u4FEE\u3002");
         return;
       }
-      new import_obsidian3.Notice(`Refining "${file.basename}"... This might take a while.`);
+      new import_obsidian3.Notice(`\u6B63\u5728\u7CBE\u4FEE\u300C${file.basename}\u300D...\u9019\u53EF\u80FD\u9700\u8981\u4E00\u4E9B\u6642\u9593\u3002`);
       const rawResponse = await this.apiClient.prompt(
         REFINER_SYSTEM_PROMPT,
         bodyContent,
@@ -403,7 +403,7 @@ var NoteRefinerEngine = class {
       );
       const parsed = parseJsonFromLLM(rawResponse);
       if (!parsed || !parsed.summary || !Array.isArray(parsed.highlights)) {
-        new import_obsidian3.Notice("LLM returned unexpected JSON structure. Check console.");
+        new import_obsidian3.Notice("\u5927\u578B\u8A9E\u8A00\u6A21\u578B\uFF08LLM\uFF09\u56DE\u50B3\u7684 JSON \u7D50\u69CB\u975E\u9810\u671F\u3002\u8ACB\u6AA2\u67E5\u4E3B\u63A7\u53F0\u3002");
         console.error("[NoteRefinerEngine] Invalid response:", rawResponse);
         return;
       }
@@ -420,7 +420,7 @@ var NoteRefinerEngine = class {
       const refinedBody = this.buildRefinedContent(parsed, atomicLinks);
       let finalCategory = parsed.category;
       if (!PILLARS2.includes(finalCategory)) {
-        finalCategory = "00_Inbox";
+        finalCategory = "00_\u6536\u4EF6\u7BB1";
       }
       const tagsToAdd = [...parsed.tags || []];
       let shouldMove = false;
@@ -428,7 +428,7 @@ var NoteRefinerEngine = class {
         tagsToAdd.push("#AI-Uncertain");
       } else {
         const parentPath = ((_a = file.parent) == null ? void 0 : _a.path) || "";
-        if (parentPath === "00_Inbox" && finalCategory !== "00_Inbox") {
+        if (parentPath === "00_\u6536\u4EF6\u7BB1" && finalCategory !== "00_\u6536\u4EF6\u7BB1") {
           shouldMove = true;
         }
       }
@@ -445,39 +445,39 @@ var NoteRefinerEngine = class {
       await this.app.vault.modify(file, newFullContent);
       if (shouldMove) {
         await this.moveFileToCategory(file, finalCategory);
-        new import_obsidian3.Notice(`Refined & moved to ${finalCategory}`);
+        new import_obsidian3.Notice(`\u7CBE\u4FEE\u5B8C\u6210\u4E26\u5DF2\u79FB\u52D5\u5230 ${finalCategory}`);
       } else {
-        new import_obsidian3.Notice(`Refinement complete.`);
+        new import_obsidian3.Notice(`\u7CBE\u4FEE\u5B8C\u6210\u3002`);
       }
     } catch (err) {
       console.error("[NoteRefinerEngine] Error processing file:", err);
-      new import_obsidian3.Notice(`Refinement failed: ${err.message}`);
+      new import_obsidian3.Notice(`\u7CBE\u4FEE\u5931\u6557\uFF1A${err.message}`);
     }
   }
   buildRefinedContent(parsed, atomicLinks) {
     const parts = [];
-    parts.push(`> [!summary] Summary`);
+    parts.push(`> [!summary] \u6458\u8981`);
     parts.push(`> ${parsed.summary.replace(/\\n/g, "\\n> ")}`);
     parts.push(``);
     if (parsed.keywords && Array.isArray(parsed.keywords) && parsed.keywords.length > 0) {
-      parts.push(`> [!info] \u95DC\u9375\u5B57\u5C0D\u7167\u8868 (Keywords)`);
+      parts.push(`> [!info] \u95DC\u9375\u8A5E\u5F59\u5C0D\u7167\u8868\uFF08Keywords \u82F1\u6587\u81F3\u7E41\u9AD4\u4E2D\u6587\uFF09`);
       for (const kw of parsed.keywords) {
         parts.push(`> - **${kw.en}**: ${kw.zh}`);
       }
       parts.push(``);
     }
-    parts.push(`## Highlights (\u9AD8\u4EAE)`);
+    parts.push(`## \u91CD\u9EDE\u63D0\u53D6`);
     if (parsed.highlights.length > 0) {
       for (const hl of parsed.highlights) {
         parts.push(`${hl}`);
         parts.push(``);
       }
     } else {
-      parts.push(`*(No specific useful paragraphs extracted)*`);
+      parts.push(`*\uFF08\u672A\u767C\u73FE\u7279\u5B9A\u6709\u7528\u6BB5\u843D\uFF09*`);
       parts.push(``);
     }
     if (atomicLinks.length > 0) {
-      parts.push(`## \u539F\u5B50\u5316\u7B46\u8A18 (Atomic Concepts)`);
+      parts.push(`## \u539F\u5B50\u5316\u6982\u5FF5\u7B46\u8A18`);
       for (const link of atomicLinks) {
         parts.push(`- ${link}`);
       }
@@ -491,7 +491,7 @@ var NoteRefinerEngine = class {
     try {
       let finalCategory = category;
       if (!PILLARS2.includes(finalCategory)) {
-        finalCategory = "00_Inbox";
+        finalCategory = "00_\u6536\u4EF6\u7BB1";
       }
       const destFolder = (0, import_obsidian3.normalizePath)(finalCategory);
       const abstractFolder = this.app.vault.getAbstractFileByPath(destFolder);
@@ -546,40 +546,40 @@ ${data.content}
 // src/articleProcessor.ts
 var import_obsidian4 = require("obsidian");
 var PILLARS3 = [
-  "10_Work_&_Management",
-  "20_Academic_CS",
-  "30_Life_&_Creations",
-  "40_Self_Hosted_Lab",
-  "99_Uncategorized"
+  "10_\u5DE5\u4F5C\u8207\u7BA1\u7406",
+  "20_\u5B78\u8853\u8207\u96FB\u8166\u79D1\u5B78",
+  "30_\u751F\u6D3B\u8207\u5275\u4F5C",
+  "40_\u81EA\u8A17\u7BA1\u5BE6\u9A57\u5BA4",
+  "99_\u672A\u5206\u985E"
 ];
-var ARTICLE_PROCESSOR_PROMPT = `\u95B1\u8B80\u4F7F\u7528\u8005\u63D0\u4F9B\u7684\u6587\u7AE0\u5167\u5BB9\uFF0C\u4E26\u56B4\u683C\u6309\u7167\u4EE5\u4E0B\u56DB\u500B\u6B65\u9A5F\u8655\u7406\uFF0C\u6700\u7D42\u6539\u5BEB\u70BA\u4E00\u500B\u5B8C\u6574\u7684 Markdown \u683C\u5F0F\u7B46\u8A18\u3002
+var ARTICLE_PROCESSOR_PROMPT = `\u95B1\u8B80\u4F7F\u7528\u8005\u63D0\u4F9B\u7684\u6587\u7AE0\u5167\u5BB9\uFF0C\u4E26\u56B4\u683C\u6309\u7167\u4EE5\u4E0B\u56DB\u500B\u6B65\u9A5F\u8655\u7406\uFF0C\u6700\u7D42\u6539\u5BEB\u70BA\u4E00\u500B\u5B8C\u6574\u7684 Markdown\uFF08\u6A19\u8A18\u8A9E\u8A00\uFF09\u683C\u5F0F\u7B46\u8A18\u3002
 
-## Step 1: \u5EFA\u7ACB\u6A19\u6E96\u5316 YAML Frontmatter
+## \u6B65\u9A5F\u4E00\uFF1A\u5EFA\u7ACB\u6A19\u6E96\u5316 YAML\uFF08YAML \u8CC7\u6599\u5E8F\u5217\u5316\u683C\u5F0F\uFF09\u524D\u6587
 \u8ACB\u6839\u64DA\u6587\u7AE0\u5167\u5BB9\uFF0C\u63D0\u53D6\u4E2D\u7E7C\u8CC7\u6599\u4E26\u751F\u6210 YAML \u5340\u584A\u3002
-- type: reference
-- source: {SOURCE_URL}
-- captured: {CAPTURED_DATE}
-- category: \u5FC5\u9808\u662F\u4EE5\u4E0B\u4E94\u5927\u5206\u985E\uFF08Five Pillars\uFF09\u7684\u5176\u4E2D\u4E00\u500B\u7CBE\u78BA\u540D\u7A31\uFF1A
-  - 10_Work_&_Management (\u5718\u968A\u5E36\u9818\u3001\u5C08\u6848\u7BA1\u7406\u3001\u4EBA\u969B\u3001\u8077\u5834)
-  - 20_Academic_CS (\u8A08\u7B97\u6A5F\u79D1\u5B78\u3001\u5B78\u4F4D\u3001\u7A0B\u5F0F\u958B\u767C\u3001\u6280\u8853)
-  - 30_Life_&_Creations (\u751F\u6D3B\u98F2\u98DF\u3001\u65C5\u904A\u3001\u500B\u4EBA\u8208\u8DA3)
-  - 40_Self_Hosted_Lab (\u4F3A\u670D\u5668\u3001Docker\u3001\u81EA\u8A17\u7BA1\u3001AI\u5DE5\u5177)
-  - 99_Uncategorized (\u7121\u6CD5\u6B78\u985E\u5230\u4EE5\u4E0A\u56DB\u5927\u985E\u5225\u6642\u653E\u9019\u88E1)
-- tags: [\u63D0\u53D6 2-3 \u500B\u8207\u4E3B\u984C\u76F8\u95DC\u7684\u6A19\u7C64\uFF0C\u5FC5\u9808\u5305\u542B #web-clippings\uFF0C\u4E26\u8996\u60C5\u6CC1\u52A0\u4E0A #status/to-process \u6216 #status/evergreen]
+- type\uFF08\u985E\u578B\uFF09: reference\uFF08\u53C3\u8003\u8CC7\u6599\uFF09
+- source\uFF08\u4F86\u6E90\uFF09: {SOURCE_URL}
+- captured\uFF08\u64F7\u53D6\u65E5\u671F\uFF09: {CAPTURED_DATE}
+- category\uFF08\u5206\u985E\uFF09: \u5FC5\u9808\u662F\u4EE5\u4E0B\u4E94\u5927\u652F\u67F1\uFF08Five Pillars\uFF09\u7684\u5176\u4E2D\u4E00\u500B\u7CBE\u78BA\u540D\u7A31\uFF1A
+  - 10_\u5DE5\u4F5C\u8207\u7BA1\u7406\uFF08\u5718\u968A\u5E36\u9818\u3001\u6703\u8B70\u3001\u5C08\u6848\u7BA1\u7406\uFF08project management\uFF09\u3001\u4EBA\u969B\u3001\u8077\u5834\uFF09
+  - 20_\u5B78\u8853\u8207\u96FB\u8166\u79D1\u5B78\uFF08\u96FB\u8166\u79D1\u5B78\uFF08Computer Science\uFF09\u3001\u5B78\u4F4D\u3001\u7A0B\u5F0F\u958B\u767C\uFF08programming\uFF09\u3001\u6280\u8853\uFF09
+  - 30_\u751F\u6D3B\u8207\u5275\u4F5C\uFF08\u751F\u6D3B\u98F2\u98DF\u3001\u65C5\u904A\u3001\u500B\u4EBA\u8208\u8DA3\uFF09
+  - 40_\u81EA\u8A17\u7BA1\u5BE6\u9A57\u5BA4\uFF08\u4F3A\u670D\u5668\u3001Docker \u5BB9\u5668\u5316\uFF08containerization\uFF09\u3001\u81EA\u8A17\u7BA1\uFF08self-hosted\uFF09\u3001\u4EBA\u5DE5\u667A\u6167\uFF08AI\uFF09\u5DE5\u5177\uFF09
+  - 99_\u672A\u5206\u985E\uFF08\u7121\u6CD5\u6B78\u985E\u5230\u4EE5\u4E0A\u56DB\u5927\u985E\u5225\u6642\u653E\u9019\u88E1\uFF09
+- tags\uFF08\u6A19\u7C64\uFF09: [\u63D0\u53D6 2-3 \u500B\u8207\u4E3B\u984C\u76F8\u95DC\u7684\u6A19\u7C64\uFF0C\u5FC5\u9808\u5305\u542B #web-clippings\uFF08\u7DB2\u9801\u526A\u8F2F\uFF09\uFF0C\u4E26\u8996\u60C5\u6CC1\u52A0\u4E0A #status/to-process\uFF08\u5F85\u8655\u7406\u72C0\u614B\uFF09\u6216 #status/evergreen\uFF08\u5E38\u9752\u7B46\u8A18\u72C0\u614B\uFF09]
 
-## Step 2: \u64B0\u5BEB\u300C\u4E00\u53E5\u8A71\u7E3D\u7D50 (One-Sentence Summary)\u300D
+## \u6B65\u9A5F\u4E8C\uFF1A\u64B0\u5BEB\u300C\u4E00\u53E5\u8A71\u7E3D\u7D50\uFF08One-Sentence Summary\uFF09\u300D
 \u5728 YAML \u5340\u584A\u4E0B\u65B9\uFF0C\u8ACB\u7528\u4E00\u53E5\u7CBE\u7149\u7684\u8A71\uFF08\u4E0D\u8D85\u904E 50 \u5B57\uFF09\u7E3D\u7D50\u9019\u7BC7\u6587\u7AE0\u7684\u6838\u5FC3\u50F9\u503C\u6216\u89E3\u6C7A\u7684\u554F\u984C\uFF0C\u8B93\u672A\u4F86\u7684\u8B80\u8005\uFF08\u4F7F\u7528\u8005\u672C\u4EBA\uFF09\u80FD\u5728\u4E00\u79D2\u5167\u6C7A\u5B9A\u662F\u5426\u9700\u8981\u7E7C\u7E8C\u95B1\u8B80\u3002
 
-## Step 3: \u77E5\u8B58\u84B8\u993E\u8207\u91CD\u9EDE\u63D0\u53D6 (Distillation)
+## \u6B65\u9A5F\u4E09\uFF1A\u77E5\u8B58\u84B8\u993E\u8207\u91CD\u9EDE\u63D0\u53D6\uFF08Distillation\uFF09
 \u4E0D\u8981\u539F\u6587\u7167\u6284\u3002\u8ACB\u904E\u6FFE\u6389\u5EE2\u8A71\u8207\u5197\u9577\u7684\u92EA\u9673\uFF0C\u63D0\u53D6\u6587\u7AE0\u4E2D\u6700\u5177\u50F9\u503C\u7684 3 \u5230 5 \u500B\u6838\u5FC3\u89C0\u9EDE\u6216\u5BE6\u7528\u6280\u5DE7\uFF0C\u4E26\u4F7F\u7528 Markdown \u7684\u689D\u5217\u5F0F\uFF08Bullet points\uFF09\u6216\u5F15\u7528\u5340\u584A\uFF08>\uFF09\u5448\u73FE\u3002
 
-## Step 4: \u539F\u5B50\u5316\u6982\u5FF5\u6A19\u8A18\u8207\u7368\u7ACB\u8403\u53D6 (Atomization & Extraction)
+## \u6B65\u9A5F\u56DB\uFF1A\u539F\u5B50\u5316\u6982\u5FF5\u6A19\u8A18\u8207\u7368\u7ACB\u8403\u53D6\uFF08Atomization & Extraction\uFF09
 \u9019\u662F\u6700\u91CD\u8981\u7684\u4E00\u6B65\u3002\u8ACB\u4E3B\u52D5\u8FA8\u8B58\u6587\u7AE0\u4E2D\u51FA\u73FE\u7684\u300C\u7368\u7ACB\u91CD\u8981\u6982\u5FF5\u300D\u3001\u300C\u5C08\u6709\u540D\u8A5E\u300D\u3001\u300C\u6846\u67B6\u300D\u6216\u300C\u6F14\u7B97\u6CD5\u300D\uFF08\u4F8B\u5982\uFF1A\u7279\u5B9A\u7684\u7BA1\u7406\u5DE5\u5177\u3001\u7CFB\u7D71\u67B6\u69CB\u540D\u7A31\u7B49\uFF09\u3002
 1. \u5728\u91CD\u9EDE\u63D0\u53D6\u7684\u6B63\u6587\u4E2D\uFF0C\u5C07\u9019\u4E9B\u8A5E\u5F59\u4F7F\u7528\u96D9\u5C64\u4E2D\u62EC\u865F \`[[ ]]\` \u5305\u8986\u8D77\u4F86\u3002
-2. \u5728\u6574\u4EFD\u7B46\u8A18\u7684\u6700\u672B\u7AEF\uFF0C\u8ACB **\u52D9\u5FC5** \u4F7F\u7528\u4EE5\u4E0B \`<atomic-notes>\` \u7684 XML \u7D50\u69CB\uFF0C\u70BA\u6BCF\u4E00\u500B\u6A19\u8A18 \`[[ ]]\` \u7684\u5C08\u6709\u540D\u8A5E\u7522\u751F\u7368\u7ACB\u7B46\u8A18\u5167\u5BB9\uFF08\u5305\u542B\u5B9A\u7FA9\u3001\u7528\u9014\u53CA\u95DC\u806F\u6A19\u7C64\uFF09\u3002
+2. \u5728\u6574\u4EFD\u7B46\u8A18\u7684\u6700\u672B\u7AEF\uFF0C\u8ACB **\u52D9\u5FC5** \u4F7F\u7528\u4EE5\u4E0B \`<atomic-notes>\` \u7684 XML\uFF08\u5EF6\u6A19\u8A18\u8A9E\u8A00\uFF09\u7D50\u69CB\uFF0C\u70BA\u6BCF\u4E00\u500B\u6A19\u8A18 \`[[ ]]\` \u7684\u5C08\u6709\u540D\u8A5E\u7522\u751F\u7368\u7ACB\u7B46\u8A18\u5167\u5BB9\uFF08\u5305\u542B\u5B9A\u7FA9\u3001\u7528\u9014\u53CA\u95DC\u806F\u6A19\u7C64\uFF09\u3002
 
 ---
-# Output Template (\u56B4\u683C\u9075\u5FAA\u6B64\u683C\u5F0F\u8F38\u51FA\uFF0C\u4E0D\u8981\u8F38\u51FA\u4EFB\u4F55\u5176\u4ED6\u591A\u9918\u7684\u5C0D\u8A71\u6587\u5B57)
+# \u8F38\u51FA\u7BC4\u672C\uFF08\u56B4\u683C\u9075\u5FAA\u6B64\u683C\u5F0F\u8F38\u51FA\uFF0C\u4E0D\u8981\u8F38\u51FA\u4EFB\u4F55\u5176\u4ED6\u591A\u9918\u7684\u5C0D\u8A71\u6587\u5B57\uFF09
 
 ---
 type: reference
@@ -617,7 +617,7 @@ var ArticleProcessorEngine = class {
       const sourceUrl = urlMatch ? urlMatch[1] : "";
       const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
       const systemPrompt = ARTICLE_PROCESSOR_PROMPT.replace(/\{CAPTURED_DATE\}/g, today).replace(/\{SOURCE_URL\}/g, sourceUrl || "[\u586B\u5BEB\u539F\u6587\u7DB2\u5740\uFF0C\u82E5\u7121\u5247\u7559\u7A7A]");
-      new import_obsidian4.Notice(`Processing article "${file.basename}"... This might take a while.`);
+      new import_obsidian4.Notice(`\u6B63\u5728\u8655\u7406\u6587\u7AE0\u300C${file.basename}\u300D...\u9019\u53EF\u80FD\u9700\u8981\u4E00\u4E9B\u6642\u9593\u3002`);
       const rawResponse = await this.apiClient.prompt(
         systemPrompt,
         content,
@@ -636,12 +636,12 @@ var ArticleProcessorEngine = class {
           finalMarkdown = finalMarkdown.substring(match.index);
         }
       }
-      let finalCategory = "99_Uncategorized";
+      let finalCategory = "99_\u672A\u5206\u985E";
       const catMatch = finalMarkdown.match(/category:\s*(.+)/i);
       if (catMatch) {
         finalCategory = catMatch[1].trim().replace(/^["'\[\]]+|["'\[\]]+$/g, "");
         if (!PILLARS3.includes(finalCategory)) {
-          finalCategory = "99_Uncategorized";
+          finalCategory = "99_\u672A\u5206\u985E";
         }
       }
       const atomicRegex = /<atomic-notes>([\s\S]*?)<\/atomic-notes>/i;
@@ -661,7 +661,7 @@ var ArticleProcessorEngine = class {
           const catAttrMatch = fullTagStr.match(catAttrRegex);
           let noteCategory = catAttrMatch ? catAttrMatch[1].trim() : finalCategory;
           if (!PILLARS3.includes(noteCategory)) {
-            noteCategory = "99_Uncategorized";
+            noteCategory = "99_\u672A\u5206\u985E";
           }
           const content2 = nMatch[2].trim();
           const tagsArr = tagsStr.split(/\s+/).filter(Boolean);
@@ -682,7 +682,7 @@ var ArticleProcessorEngine = class {
       const uniqueImages = imagesMatch ? Array.from(new Set(imagesMatch)) : [];
       let imagesSection = "";
       if (uniqueImages.length > 0) {
-        imagesSection = "\n\n## \u539F\u59CB\u9644\u5716 (Saved Images)\n" + uniqueImages.join("\n\n") + "\n";
+        imagesSection = "\n\n## \u539F\u59CB\u9644\u5716\uFF08\u4FDD\u7559\u7684\u5716\u50CF\uFF09\n" + uniqueImages.join("\n\n") + "\n";
       }
       await this.app.vault.modify(file, originalFmFull + finalBody + imagesSection);
       await this.app.fileManager.processFrontMatter(file, (fm) => {
@@ -762,15 +762,15 @@ var STANDUP_PROMPT = `\u4F60\u662F\u4E00\u500B\u5C08\u696D\u7684\u5BEB\u4F5C\u4E
 - \u7E3D\u7D50\u689D\u76EE\uFF0C\u4E26\u9644\u5E36\u539F\u6587\u9023\u7D50 [[\u7B46\u8A18\u540D\u7A31]]`;
 var DRAFTING_PROMPT = `\u4F60\u662F\u4E00\u500B\u5C08\u696D\u7684\u5167\u5BB9\u5275\u4F5C\u8005\u3002\u8ACB\u6839\u64DA\u4F7F\u7528\u8005\u63D0\u4F9B\u7684 \`plan.md\`\uFF08\u5305\u542B\u76EE\u6A19\u3001\u67B6\u69CB\u8207\u80CC\u666F\u8CC7\u8A0A\uFF09\u4F86\u8349\u64EC\u4E00\u7BC7\u6587\u7AE0\u3002
 \u56B4\u683C\u8981\u6C42\uFF1A
-1. \u884D\u751F\u5F0F\u5BEB\u4F5C\uFF1A\u5728\u751F\u6210\u65B0\u5167\u5BB9\u6642\uFF0C\u5FC5\u9808\u9644\u5E36\u4F86\u6E90\u7B46\u8A18\u7684\u539F\u6587\u5F15\u7528\u8207\u9023\u7D50\uFF08Quotes & Links\uFF09\uFF0C\u78BA\u4FDD\u65B0\u6587\u7AE0\u7684\u8AD6\u9EDE\u6709\u8DE1\u53EF\u5FAA\uFF0C\u96A8\u6642\u53EF\u4EE5\u56DE\u6EAF\u4E8B\u5BE6\u3002\u8ACB\u5728\u884C\u6587\u4E2D\u4F7F\u7528 \`[[\u7B46\u8A18\u540D\u7A31]]\` \u7684\u8A9E\u6CD5\u3002
+1. \u884D\u751F\u5F0F\u5BEB\u4F5C\uFF1A\u5728\u751F\u6210\u65B0\u5167\u5BB9\u6642\uFF0C\u5FC5\u9808\u9644\u5E36\u4F86\u6E90\u7B46\u8A18\u7684\u539F\u6587\u5F15\u7528\u8207\u9023\u7D50\uFF08\u539F\u59CB\u6587\u5361\uFF08Quotes\uFF09\u8207\u9023\u7D50\uFF08Links\uFF09\uFF09\uFF0C\u78BA\u4FDD\u65B0\u6587\u7AE0\u7684\u8AD6\u9EDE\u6709\u8DE1\u53EF\u5FAA\uFF0C\u96A8\u6642\u53EF\u4EE5\u56DE\u6EAF\u4E8B\u5BE6\u3002\u8ACB\u5728\u884C\u6587\u4E2D\u4F7F\u7528 \`[[\u7B46\u8A18\u540D\u7A31]]\` \u7684\u8A9E\u6CD5\u3002
 2. \u958B\u982D\u5FC5\u9808\u5305\u542B\u6A19\u6E96 YAML \u5C6C\u6027\uFF08\u5305\u542B type: draft, category, tags\uFF09\u3002
 3. \u8A9E\u6C23\u5C08\u696D\u3001\u6D41\u66A2\u3002`;
 var SWEEP_PROMPT = `\u4F60\u662F\u4E00\u500B\u56B4\u8B39\u7684\u5BEB\u4F5C\u52A9\u7406\u3002\u8ACB\u57F7\u884C\u300C\u6383\u9664\uFF08Sweep\uFF09\u300D\u8207\u300C\u5BE9\u6838\u300D\u4EFB\u52D9\u3002
 \u95B1\u8B80\u76EE\u524D\u7684\u8349\u7A3F\uFF0C\u5B8C\u6210\u4EE5\u4E0B\u6AA2\u67E5\u8207\u5EFA\u8B70\uFF1A
-1. \u662F\u5426\u6709\u907A\u6F0F\u7684YAML\u5C6C\u6027\uFF1F
+1. \u662F\u5426\u6709\u907A\u6F0F\u7684 YAML \u5C6C\u6027\uFF1F
 2. \u662F\u5426\u5177\u5099\u81F3\u5C11\u4E00\u500B\u6307\u5411\u73FE\u6709\u7B46\u8A18\u7684\u9023\u7D50 \`[[ ]]\`\uFF1F
-3. \u5F9E\u8349\u7A3F\u5167\u5BB9\u4E2D\u5C0B\u627E\u53EF\u80FD\u7684\u908F\u8F2F\u76F2\u5340\uFF0C\u5EFA\u8B70\u662F\u5426\u9700\u8981\u88DC\u5145\u5176\u4ED6\u4EBA\u7269\u8A8C\uFF08People notes\uFF09\u6216\u5C08\u6848\u80CC\u666F\u3002
-\u8ACB\u4EE5\u7C21\u6F54\u7684\u5217\u8868\u56DE\u5831\u4F60\u7684\u5BE9\u6838\u8207 Sweep \u7D50\u679C\u3002`;
+3. \u5F9E\u8349\u7A3F\u5167\u5BB9\u4E2D\u5C0B\u627E\u53EF\u80FD\u7684\u908F\u8F2F\u76F2\u5340\uFF0C\u5EFA\u8B70\u662F\u5426\u9700\u8981\u88DC\u5145\u5176\u4ED6\u4EBA\u7269\u8A8C\uFF08\u4EBA\u7269\u8A18\u9304\uFF08People notes\uFF09\uFF09\u6216\u5C08\u6848\u80CC\u666F\u3002
+\u8ACB\u4EE5\u7C21\u6F54\u7684\u5217\u8868\u56DE\u5831\u4F60\u7684\u5BE9\u6838\u8207\u6383\u9664\u7D50\u679C\u3002`;
 var TopicInputModal = class extends import_obsidian5.Modal {
   constructor(app, onSubmit) {
     super(app);
@@ -811,7 +811,7 @@ var WriterEngine = class {
    * 建立一個新的專案資料夾與 plan.md
    */
   async initProject(projectName, objective) {
-    new import_obsidian5.Notice("Agentic Reasoning: Searching your vault titles...");
+    new import_obsidian5.Notice("\u4EE3\u7406\u63A8\u7406\uFF08Agentic Reasoning\uFF09\uFF1A\u6B63\u5728\u641C\u5C0B\u4F60\u7684\u77E5\u8B58\u5EAB\u6A19\u984C...");
     try {
       const allTitles = this.app.vault.getMarkdownFiles().map((f) => f.basename).filter((n) => !n.includes("Atomic Note") && n !== "plan" && n !== "draft");
       const promptInput = `### \u5BEB\u4F5C\u76EE\u6A19
@@ -824,8 +824,8 @@ ${allTitles.join("\n")}`;
         promptInput,
         this.temperature
       );
-      const safeName = projectName.replace(/[\\/:"*?<>|#^\[\]]/g, "").trim() || "New_Project";
-      const destFolder = (0, import_obsidian5.normalizePath)(`99_Uncategorized/${safeName}`);
+      const safeName = projectName.replace(/[\\/:"*?<>|#^\[\]]/g, "").trim() || "\u65B0\u5C08\u6848";
+      const destFolder = (0, import_obsidian5.normalizePath)(`99_\u672A\u5206\u985E/${safeName}`);
       const abstractFolder = this.app.vault.getAbstractFileByPath(destFolder);
       if (!abstractFolder) {
         await this.app.vault.createFolder(destFolder);
@@ -839,36 +839,36 @@ status: planning
 ---
 # \u5BEB\u4F5C\u8A08\u756B\uFF1A${safeName}
 
-## \u76EE\u6A19 (Objective)
+## \u76EE\u6A19\uFF08Objective\uFF09
 ${objective}
 
-## \u67B6\u69CB (Structure)
+## \u67B6\u69CB\uFF08Structure\uFF09
 1. \u524D\u8A00
 2. \u6838\u5FC3\u89C0\u9EDE
 3. \u7D50\u8AD6
 
-## \u9700\u8981\u5F15\u7528\u7684\u65E2\u6709\u7B46\u8A18 (Required Notes)
+## \u9700\u8981\u5F15\u7528\u7684\u65E2\u6709\u7B46\u8A18\uFF08Required Notes\uFF09
 ${suggestedLinks.trim()}
 
-## \u60C5\u5883\u5DE5\u7A0B\uFF1A\u6668\u9593\u7C21\u5831\u80CC\u666F\u5340 (Context)
-[\u900F\u904E Standup \u6307\u4EE4\u81EA\u52D5\u751F\u6210\u5340\u584A]
+## \u60C5\u5883\u5DE5\u7A0B\uFF1A\u6668\u9593\u7C21\u5831\u80CC\u666F\u5340\uFF08Context\uFF09
+[\u900F\u904E\u6668\u9593\u7C21\u5831\u6307\u4EE4\u81EA\u52D5\u751F\u6210\u5340\u584A]
 `;
         const file = await this.app.vault.create(planPath, planTemplate);
-        new import_obsidian5.Notice(`Initialized Writing Project: ${safeName}`);
+        new import_obsidian5.Notice(`\u5DF2\u521D\u59CB\u5316\u5BEB\u4F5C\u5C08\u6848\uFF1A${safeName}`);
         await this.app.workspace.getLeaf(false).openFile(file);
       } else {
-        new import_obsidian5.Notice("Project already exists!");
+        new import_obsidian5.Notice("\u5C08\u6848\u5DF2\u5B58\u5728\uFF01");
       }
     } catch (err) {
       console.error("[WriterEngine] Init failed:", err);
-      new import_obsidian5.Notice(`Initialization failed: ${err.message}`);
+      new import_obsidian5.Notice(`\u521D\u59CB\u5316\u5931\u6557\uFF1A${err.message}`);
     }
   }
   /**
    * 2. Standup (Retrieve recent context)
    */
   async generateStandup(planFile) {
-    new import_obsidian5.Notice("Running Agentic Standup (Gathering Context via Graph & Time)...");
+    new import_obsidian5.Notice("\u57F7\u884C\u4EE3\u7406\u6668\u9593\u7C21\u5831\uFF08\u901A\u904E\u5716\u8868\u8207\u6642\u9593\u8490\u96C6\u80CC\u666F\u8CC7\u8A0A\uFF09...");
     try {
       const planContent = await this.app.vault.read(planFile);
       const candidateFiles = /* @__PURE__ */ new Set();
@@ -1110,21 +1110,21 @@ var LocalAgentSettingTab = class extends import_obsidian6.PluginSettingTab {
 };
 
 // src/main.ts
-var MAP_SUMMARY_SYSTEM_PROMPT = `You are a concise summariser. Read the following note and produce exactly ONE sentence that captures the core idea or theme. Do not add any preamble \u2014 respond with the single sentence only.`;
-var REDUCE_INSIGHT_SYSTEM_PROMPT = `You are an analytical research assistant. You will receive a numbered list of one-sentence summaries from different notes written over a period of time.
+var MAP_SUMMARY_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u7CBE\u6E96\u7684\u5167\u5BB9\u6458\u8981\u5668\u3002\u8ACB\u95B1\u8B80\u4EE5\u4E0B\u7B46\u8A18\uFF0C\u4E26\u751F\u6210\u6070\u597D\u4E00\u53E5\u8A71\u4F86\u6355\u6349\u5176\u6838\u5FC3\u601D\u60F3\u6216\u4E3B\u984C\u3002\u4E0D\u8981\u589E\u52A0\u4EFB\u4F55\u524D\u8A00\u2014\u2014\u76F4\u63A5\u56DE\u61C9\u90A3\u500B\u7368\u7ACB\u7684\u53E5\u5B50\u5373\u53EF\u3002`;
+var REDUCE_INSIGHT_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u5206\u6790\u578B\u7814\u7A76\u52A9\u7406\u3002\u4F60\u5C07\u6536\u5230\u4F86\u81EA\u5728\u4E00\u6BB5\u6642\u9593\u5167\u6240\u5BEB\u7B46\u8A18\u7684\u82E5\u5E72\u500B\u55AE\u53E5\u6458\u8981\uFF08numbered list\uFF09\u3002
 
-Your task:
-1. Identify recurring themes, patterns, or emerging connections across the summaries.
-2. Highlight any contradictions or evolving viewpoints.
-3. Suggest actionable next steps or open questions.
+\u4F60\u7684\u4EFB\u52D9\uFF1A
+1. \u8B58\u5225\u6458\u8981\u9593\u7684\u5FAA\u74B0\u4E3B\u984C\u3001\u898F\u5F8B\u6216\u65B0\u8208\u9023\u7D50\u3002
+2. \u7A81\u986F\u4EFB\u4F55\u77DB\u76FE\u6216\u89C0\u9EDE\u7684\u6F14\u8B8A\u3002
+3. \u5EFA\u8B70\u53EF\u884C\u7684\u5F8C\u7E8C\u6B65\u9A5F\u6216\u958B\u653E\u6027\u554F\u984C\u3002
 
-Format your response as a well-structured markdown report with the following sections:
-## Recurring Themes
-## Key Connections
-## Contradictions & Tensions
-## Open Questions & Next Steps
+\u8ACB\u5C07\u56DE\u61C9\u683C\u5F0F\u8A2D\u70BA\u7D50\u69CB\u826F\u597D\u7684 Markdown\uFF08\u6A19\u8A18\u8A9E\u8A00\uFF09\u5831\u544A\uFF0C\u5305\u542B\u4EE5\u4E0B\u7AE0\u7BC0\uFF1A
+## \u5FAA\u74B0\u4E3B\u984C
+## \u95DC\u9375\u9023\u7D50
+## \u77DB\u76FE\u8207\u5F35\u529B
+## \u958B\u653E\u6027\u554F\u984C\u8207\u5F8C\u7E8C\u6B65\u9A5F
 
-Be insightful and specific. Reference summary numbers (e.g. "[3]") when citing evidence.`;
+\u8ACB\u6DF1\u601D\u719F\u616E\u4E14\u5177\u9AD4\u8AAA\u660E\u3002\u5F15\u7528\u6642\u8ACB\u4F7F\u7528\u6458\u8981\u7DE8\u865F\uFF08\u4F8B\u5982 "[3]"\uFF09\u4F5C\u70BA\u8B49\u64DA\u3002`;
 var LocalAgentPlugin = class extends import_obsidian7.Plugin {
   constructor() {
     super(...arguments);
@@ -1145,69 +1145,69 @@ var LocalAgentPlugin = class extends import_obsidian7.Plugin {
     this.statusBarEl = this.addStatusBarItem();
     this.setStatusBarText("");
     this.addSettingTab(new LocalAgentSettingTab(this.app, this));
-    const ribbonIconEl = this.addRibbonIcon("bot", "Start Classification (Active Note)", (evt) => {
+    const ribbonIconEl = this.addRibbonIcon("bot", "\u958B\u59CB\u5206\u985E\uFF08\u76EE\u524D\u7B46\u8A18\uFF09", (evt) => {
       this.classifyActiveNote();
     });
     ribbonIconEl.addClass("local-agent-ribbon-class");
-    const refinerIconEl = this.addRibbonIcon("sparkles", "Refine Active Note (Summary, Highlight, Atomize)", (evt) => {
+    const refinerIconEl = this.addRibbonIcon("sparkles", "\u7CBE\u4FEE\u76EE\u524D\u7B46\u8A18\uFF08\u6458\u8981\u3001\u91CD\u9EDE\u63D0\u53D6\u3001\u539F\u5B50\u5316\uFF09", (evt) => {
       this.refineActiveNote();
     });
     refinerIconEl.addClass("local-agent-refine-class");
-    const articleIconEl = this.addRibbonIcon("book-open", "Process Inbox Articles (Batch Process)", (evt) => {
+    const articleIconEl = this.addRibbonIcon("book-open", "\u8655\u7406\u6536\u4EF6\u7BB1\u6587\u7AE0\uFF08\u6279\u6B21\u8655\u7406\uFF09", (evt) => {
       this.processInboxArticles();
     });
     articleIconEl.addClass("local-agent-article-class");
     this.addCommand({
       id: "classify-active-note",
-      name: "Classify Active Note (Tags & Category)",
+      name: "\u5206\u985E\u76EE\u524D\u7B46\u8A18\uFF08\u6A19\u7C64\u548C\u5206\u985E\uFF09",
       callback: () => this.classifyActiveNote()
     });
     this.addCommand({
       id: "run-map-reduce",
-      name: "Run Map-Reduce Aggregation on Input Folder",
+      name: "\u57F7\u884C\u5730\u5716-\u7D04\u5316\uFF08Map-Reduce\uFF09\u805A\u5408\uFF08\u7279\u5B9A\u8CC7\u6599\u593E\uFF09",
       callback: () => this.runMapReduce()
     });
     this.addCommand({
       id: "refine-active-note",
-      name: "Refine Active Note (Summary, Highlight, Atomize, Classify)",
+      name: "\u7CBE\u4FEE\u76EE\u524D\u7B46\u8A18\uFF08\u6458\u8981\u3001\u91CD\u9EDE\u63D0\u53D6\u3001\u539F\u5B50\u5316\u3001\u5206\u985E\uFF09",
       callback: () => this.refineActiveNote()
     });
     this.addCommand({
       id: "process-inbox-articles",
-      name: "Process Inbox Articles (Batch Format with Atomization)",
+      name: "\u8655\u7406\u6536\u4EF6\u7BB1\u6587\u7AE0\uFF08\u6279\u6B21\u683C\u5F0F\u5316\uFF0C\u542B\u539F\u5B50\u5316\uFF09",
       callback: () => this.processInboxArticles()
     });
     this.addCommand({
       id: "cancel-local-agent-processing",
-      name: "Cancel Current Processing Task",
+      name: "\u53D6\u6D88\u76EE\u524D\u8655\u7406\u4EFB\u52D9",
       callback: () => {
         if (this.isProcessing) {
           this.cancelProcessing = true;
-          new import_obsidian7.Notice("Cancelling background tasks...");
-          this.setStatusBarText("Cancelling...");
+          new import_obsidian7.Notice("\u6B63\u5728\u53D6\u6D88\u80CC\u666F\u4EFB\u52D9...");
+          this.setStatusBarText("\u53D6\u6D88\u4E2D...");
         } else {
-          new import_obsidian7.Notice("No tasks are currently running.");
+          new import_obsidian7.Notice("\u76EE\u524D\u6C92\u6709\u6B63\u5728\u57F7\u884C\u7684\u4EFB\u52D9\u3002");
         }
       }
     });
     this.addCommand({
       id: "writer-init-project",
-      name: "Writer: Initialize Writing Project (plan.md)",
+      name: "\u5BEB\u4F5C\u4EE3\u7406\uFF1A\u521D\u59CB\u5316\u5BEB\u4F5C\u5C08\u6848\uFF08plan.md\uFF09",
       callback: () => this.handleWriterInit()
     });
     this.addCommand({
       id: "writer-om-standup",
-      name: "Writer: Morning Standup (Gather Context from Last 3 Days)",
+      name: "\u5BEB\u4F5C\u4EE3\u7406\uFF1A\u6668\u9593\u7C21\u5831\uFF08\u8490\u96C6\u904E\u53BB 3 \u5929\u7684\u80CC\u666F\u8CC7\u8A0A\uFF09",
       callback: () => this.handleWriterAction("standup")
     });
     this.addCommand({
       id: "writer-draft-article",
-      name: "Writer: Draft Article (from plan.md)",
+      name: "\u5BEB\u4F5C\u4EE3\u7406\uFF1A\u8349\u64EC\u6587\u7AE0\uFF08\u5F9E plan.md\uFF09",
       callback: () => this.handleWriterAction("draft")
     });
     this.addCommand({
       id: "writer-sweep-draft",
-      name: "Writer: Sweep & Feedback (Review Draft with Knowledge Base)",
+      name: "\u5BEB\u4F5C\u4EE3\u7406\uFF1A\u6383\u9664\u8207\u56DE\u994B\uFF08\u7528\u77E5\u8B58\u5EAB\u5BE9\u6838\u8349\u7A3F\uFF09",
       callback: () => this.handleWriterAction("sweep")
     });
   }

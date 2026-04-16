@@ -2,41 +2,41 @@ import { App, TFile, Notice, normalizePath } from "obsidian";
 import { LocalLLMClient } from "./api";
 
 const PILLARS = [
-  "10_Work_&_Management",
-  "20_Academic_CS",
-  "30_Life_&_Creations",
-  "40_Self_Hosted_Lab",
-  "99_Uncategorized"
+  "10_工作與管理",
+  "20_學術與電腦科學",
+  "30_生活與創作",
+  "40_自託管實驗室",
+  "99_未分類"
 ];
 
-const ARTICLE_PROCESSOR_PROMPT = `閱讀使用者提供的文章內容，並嚴格按照以下四個步驟處理，最終改寫為一個完整的 Markdown 格式筆記。
+const ARTICLE_PROCESSOR_PROMPT = `閱讀使用者提供的文章內容，並嚴格按照以下四個步驟處理，最終改寫為一個完整的 Markdown（標記語言）格式筆記。
 
-## Step 1: 建立標準化 YAML Frontmatter
+## 步驟一：建立標準化 YAML（YAML 資料序列化格式）前文
 請根據文章內容，提取中繼資料並生成 YAML 區塊。
-- type: reference
-- source: {SOURCE_URL}
-- captured: {CAPTURED_DATE}
-- category: 必須是以下五大分類（Five Pillars）的其中一個精確名稱：
-  - 10_Work_&_Management (團隊帶領、專案管理、人際、職場)
-  - 20_Academic_CS (計算機科學、學位、程式開發、技術)
-  - 30_Life_&_Creations (生活飲食、旅遊、個人興趣)
-  - 40_Self_Hosted_Lab (伺服器、Docker、自託管、AI工具)
-  - 99_Uncategorized (無法歸類到以上四大類別時放這裡)
-- tags: [提取 2-3 個與主題相關的標籤，必須包含 #web-clippings，並視情況加上 #status/to-process 或 #status/evergreen]
+- type（類型）: reference（參考資料）
+- source（來源）: {SOURCE_URL}
+- captured（擷取日期）: {CAPTURED_DATE}
+- category（分類）: 必須是以下五大支柱（Five Pillars）的其中一個精確名稱：
+  - 10_工作與管理（團隊帶領、會議、專案管理（project management）、人際、職場）
+  - 20_學術與電腦科學（電腦科學（Computer Science）、學位、程式開發（programming）、技術）
+  - 30_生活與創作（生活飲食、旅遊、個人興趣）
+  - 40_自託管實驗室（伺服器、Docker 容器化（containerization）、自託管（self-hosted）、人工智慧（AI）工具）
+  - 99_未分類（無法歸類到以上四大類別時放這裡）
+- tags（標籤）: [提取 2-3 個與主題相關的標籤，必須包含 #web-clippings（網頁剪輯），並視情況加上 #status/to-process（待處理狀態）或 #status/evergreen（常青筆記狀態）]
 
-## Step 2: 撰寫「一句話總結 (One-Sentence Summary)」
+## 步驟二：撰寫「一句話總結（One-Sentence Summary）」
 在 YAML 區塊下方，請用一句精煉的話（不超過 50 字）總結這篇文章的核心價值或解決的問題，讓未來的讀者（使用者本人）能在一秒內決定是否需要繼續閱讀。
 
-## Step 3: 知識蒸餾與重點提取 (Distillation)
+## 步驟三：知識蒸餾與重點提取（Distillation）
 不要原文照抄。請過濾掉廢話與冗長的鋪陳，提取文章中最具價值的 3 到 5 個核心觀點或實用技巧，並使用 Markdown 的條列式（Bullet points）或引用區塊（>）呈現。
 
-## Step 4: 原子化概念標記與獨立萃取 (Atomization & Extraction)
+## 步驟四：原子化概念標記與獨立萃取（Atomization & Extraction）
 這是最重要的一步。請主動辨識文章中出現的「獨立重要概念」、「專有名詞」、「框架」或「演算法」（例如：特定的管理工具、系統架構名稱等）。
 1. 在重點提取的正文中，將這些詞彙使用雙層中括號 \`[[ ]]\` 包覆起來。
-2. 在整份筆記的最末端，請 **務必** 使用以下 \`<atomic-notes>\` 的 XML 結構，為每一個標記 \`[[ ]]\` 的專有名詞產生獨立筆記內容（包含定義、用途及關聯標籤）。
+2. 在整份筆記的最末端，請 **務必** 使用以下 \`<atomic-notes>\` 的 XML（延標記語言）結構，為每一個標記 \`[[ ]]\` 的專有名詞產生獨立筆記內容（包含定義、用途及關聯標籤）。
 
 ---
-# Output Template (嚴格遵循此格式輸出，不要輸出任何其他多餘的對話文字)
+# 輸出範本（嚴格遵循此格式輸出，不要輸出任何其他多餘的對話文字）
 
 ---
 type: reference
@@ -83,7 +83,7 @@ export class ArticleProcessorEngine {
           .replace(/\{CAPTURED_DATE\}/g, today)
           .replace(/\{SOURCE_URL\}/g, sourceUrl || "[填寫原文網址，若無則留空]");
 
-      new Notice(`Processing article "${file.basename}"... This might take a while.`);
+      new Notice(`正在處理文章「${file.basename}」...這可能需要一些時間。`);
 
       const rawResponse = await this.apiClient.prompt(
         systemPrompt,
@@ -111,12 +111,12 @@ export class ArticleProcessorEngine {
       }
 
       // Auto-Migration Setup
-      let finalCategory = "99_Uncategorized";
+      let finalCategory = "99_未分類";
       const catMatch = finalMarkdown.match(/category:\s*(.+)/i);
       if (catMatch) {
          finalCategory = catMatch[1].trim().replace(/^["'\[\]]+|["'\[\]]+$/g, ""); // strip brackets/quotes
          if (!PILLARS.includes(finalCategory)) {
-             finalCategory = "99_Uncategorized"; // strict fallback
+             finalCategory = "99_未分類"; // strict fallback
          }
       }
 
@@ -141,7 +141,7 @@ export class ArticleProcessorEngine {
             const catAttrMatch = fullTagStr.match(catAttrRegex);
             let noteCategory = catAttrMatch ? catAttrMatch[1].trim() : finalCategory;
             if (!PILLARS.includes(noteCategory)) {
-               noteCategory = "99_Uncategorized"; // strict fallback
+               noteCategory = "99_未分類"; // strict fallback
             }
 
             const content = nMatch[2].trim();
@@ -171,7 +171,7 @@ export class ArticleProcessorEngine {
       
       let imagesSection = "";
       if (uniqueImages.length > 0) {
-          imagesSection = "\n\n## 原始附圖 (Saved Images)\n" + uniqueImages.join("\n\n") + "\n";
+          imagesSection = "\n\n## 原始附圖（保留的圖像）\n" + uniqueImages.join("\n\n") + "\n";
       }
 
       // Overwrite file with Original Frontmatter + LLM Body + Saved Images

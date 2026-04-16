@@ -2,32 +2,32 @@ import { App, TFile, Notice, normalizePath } from "obsidian";
 import { LocalLLMClient, parseJsonFromLLM } from "./api";
 
 const PILLARS = [
-  "10_Work_&_Management",
-  "20_Academic_CS",
-  "30_Life_&_Creations",
-  "40_Self_Hosted_Lab",
-  "00_Inbox"
+  "10_工作與管理",
+  "20_學術與電腦科學",
+  "30_生活與創作",
+  "40_自託管實驗室",
+  "00_收件箱"
 ];
 
-const CLASSIFICATION_SYSTEM_PROMPT = `You are a highly precise classification engine. Organize knowledge into ONE of the following Five Pillars exact names:
-- 10_Work_&_Management: Content related to team leading, meetings, project management, and professional networking.
-- 20_Academic_CS: Content related to Computer Science degree studies, UoPeople assignments, and technical learning.
-- 30_Life_&_Creations: Content related to food blogging (local delicacies in central Taiwan/Japan), travel plans, and personal hobbies.
-- 40_Self_Hosted_Lab: Content related to home server setup (Mac Mini 2011), Docker, self-hosted services, and AI tool testing.
-- 00_Inbox: The default fallback if no strong match is found.
+const CLASSIFICATION_SYSTEM_PROMPT = `你是一個極度精確的分類引擎。請將知識組織到以下「五大支柱（Five Pillars）」中的其中一個：
+- 10_工作與管理：團隊帶領、會議、專案管理（project management）、職場人際關係相關內容。
+- 20_學術與電腦科學：電腦科學學位、大學課程作業、程式開發（programming）、技術學習相關內容。
+- 30_生活與創作：美食部落格（台灣中部、日本在地美食）、旅遊規劃、個人興趣和創作相關內容。
+- 40_自託管實驗室：家用伺服器設置（Mac Mini 2011）、Docker 容器化（containerization）、自託管服務、人工智慧（AI）工具測試相關內容。
+- 00_收件箱：當內容無法強烈匹配任何分類時的預設分類。
 
-You MUST respond with valid JSON only. Keep the response exactly in this schema:
+你必須只回應有效的 JSON（valid JSON）格式。請精確遵循以下結構回應：
 {
-  "category": "<one of the five exact folder names above>",
-  "tags": ["<tag1>", "<tag2>", "<tag3>"],
-  "confidence": <float between 0.0 and 1.0>
+  "category": "<上述五大支柱中的其中一個>",
+  "tags": ["<標籤1>", "<標籤2>", "<標籤3>"],
+  "confidence": <介於 0.0 和 1.0 之間的浮點數>
 }
 
-Rules:
-1. "category" MUST exactly match one of the Five Pillars.
-2. "tags" must contain 3-5 specific sub-topics (e.g., "#Docker", "#NantouFood").
-3. "confidence" must reflect your certainty.
-4. Do NOT include markdown fences, code blocks, or text outside the JSON object.`;
+規則：
+1. "category" 必須完全符合五大支柱中的其中一個。
+2. "tags" 必須包含 3 至 5 個具體的子主題。例如：「#Docker」、「#南投美食」。
+3. "confidence" 必須反映你的確定程度。
+4. 不可包含 Markdown 代碼區塊（markdown fences）或 JSON 物件外的任何文字。`;
 
 interface ClassificationResult {
   category: string;
@@ -48,11 +48,11 @@ export class ClassificationEngine {
       const bodyContent = this.stripFrontmatter(content);
 
       if (bodyContent.includes("%% AI_Classified_at:")) {
-        new Notice(`File "${file.basename}" is already classified.`);
+        new Notice(`檔案「${file.basename}」已經分類過。`);
         return;
       }
 
-      new Notice(`Classifying "${file.basename}"...`);
+      new Notice(`正在分類「${file.basename}」...`);
 
       const rawResponse = await this.apiClient.prompt(
         CLASSIFICATION_SYSTEM_PROMPT,
@@ -63,7 +63,7 @@ export class ClassificationEngine {
       const parsed = parseJsonFromLLM<ClassificationResult>(rawResponse);
 
       if (!parsed || typeof parsed.category !== "string" || !Array.isArray(parsed.tags) || typeof parsed.confidence !== "number") {
-         new Notice("LLM returned unexpected JSON structure. Check console.");
+         new Notice("大型語言模型（LLM）回傳的 JSON 結構非預期。請檢查主控台。");
          console.error("[ClassificationEngine] Invalid response:", rawResponse);
          return;
       }
@@ -107,18 +107,18 @@ export class ClassificationEngine {
       // 3. Auto-Migration (Moving Files)
       if (shouldMove) {
         await this.moveFileToCategory(file, finalCategory);
-        new Notice(`Note moved to ${finalCategory}`);
+        new Notice(`筆記已移動到 ${finalCategory}`);
       } else {
         if (confidence < 0.7) {
-            new Notice(`Classification complete (low confidence). Kept as Inbox/Uncertain.`);
+            new Notice(`分類完成（信心度（confidence）不足）。保留在收件箱/未確定狀態。`);
         } else {
-            new Notice(`Classification complete.`);
+            new Notice(`分類完成。`);
         }
       }
 
     } catch (err) {
       console.error("[ClassificationEngine] Error processing file:", err);
-      new Notice(`Classification failed: ${(err as Error).message}`);
+      new Notice(`分類失敗：${(err as Error).message}`);
     }
   }
 

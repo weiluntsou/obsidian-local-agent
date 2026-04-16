@@ -21,16 +21,16 @@ const STANDUP_PROMPT = `你是一個專業的寫作代理。你的任務是執�
 
 const DRAFTING_PROMPT = `你是一個專業的內容創作者。請根據使用者提供的 \`plan.md\`（包含目標、架構與背景資訊）來草擬一篇文章。
 嚴格要求：
-1. 衍生式寫作：在生成新內容時，必須附帶來源筆記的原文引用與連結（Quotes & Links），確保新文章的論點有跡可循，隨時可以回溯事實。請在行文中使用 \`[[筆記名稱]]\` 的語法。
+1. 衍生式寫作：在生成新內容時，必須附帶來源筆記的原文引用與連結（原始文卡（Quotes）與連結（Links）），確保新文章的論點有跡可循，隨時可以回溯事實。請在行文中使用 \`[[筆記名稱]]\` 的語法。
 2. 開頭必須包含標準 YAML 屬性（包含 type: draft, category, tags）。
 3. 語氣專業、流暢。`;
 
 const SWEEP_PROMPT = `你是一個嚴謹的寫作助理。請執行「掃除（Sweep）」與「審核」任務。
 閱讀目前的草稿，完成以下檢查與建議：
-1. 是否有遺漏的YAML屬性？
+1. 是否有遺漏的 YAML 屬性？
 2. 是否具備至少一個指向現有筆記的連結 \`[[ ]]\`？
-3. 從草稿內容中尋找可能的邏輯盲區，建議是否需要補充其他人物誌（People notes）或專案背景。
-請以簡潔的列表回報你的審核與 Sweep 結果。`;
+3. 從草稿內容中尋找可能的邏輯盲區，建議是否需要補充其他人物誌（人物記錄（People notes））或專案背景。
+請以簡潔的列表回報你的審核與掃除結果。`;
 
 // ---------------------------------------------------------------------------
 // ENGINE & MODALS
@@ -90,7 +90,7 @@ export class WriterEngine {
    * 建立一個新的專案資料夾與 plan.md
    */
   public async initProject(projectName: string, objective: string): Promise<void> {
-    new Notice("Agentic Reasoning: Searching your vault titles...");
+    new Notice("代理推理（Agentic Reasoning）：正在搜尋你的知識庫標題...");
     try {
       const allTitles = this.app.vault.getMarkdownFiles()
           .map(f => f.basename)
@@ -102,8 +102,8 @@ export class WriterEngine {
          SUGGEST_PROMPT, promptInput, this.temperature
       );
 
-      const safeName = projectName.replace(/[\\/:"*?<>|#^\[\]]/g, "").trim() || "New_Project";
-      const destFolder = normalizePath(`99_Uncategorized/${safeName}`);
+      const safeName = projectName.replace(/[\\/:"*?<>|#^\[\]]/g, "").trim() || "新專案";
+      const destFolder = normalizePath(`99_未分類/${safeName}`);
       
       const abstractFolder = this.app.vault.getAbstractFileByPath(destFolder);
       if (!abstractFolder) {
@@ -119,31 +119,31 @@ status: planning
 ---
 # 寫作計畫：${safeName}
 
-## 目標 (Objective)
+## 目標（Objective）
 ${objective}
 
-## 架構 (Structure)
+## 架構（Structure）
 1. 前言
 2. 核心觀點
 3. 結論
 
-## 需要引用的既有筆記 (Required Notes)
+## 需要引用的既有筆記（Required Notes）
 ${suggestedLinks.trim()}
 
-## 情境工程：晨間簡報背景區 (Context)
-[透過 Standup 指令自動生成區塊]
+## 情境工程：晨間簡報背景區（Context）
+[透過晨間簡報指令自動生成區塊]
 `;
         const file = await this.app.vault.create(planPath, planTemplate);
-        new Notice(`Initialized Writing Project: ${safeName}`);
+        new Notice(`已初始化寫作專案：${safeName}`);
         
         // Open the plan
         await this.app.workspace.getLeaf(false).openFile(file);
       } else {
-        new Notice("Project already exists!");
+        new Notice("專案已存在！");
       }
     } catch (err) {
       console.error("[WriterEngine] Init failed:", err);
-      new Notice(`Initialization failed: ${(err as Error).message}`);
+      new Notice(`初始化失敗：${(err as Error).message}`);
     }
   }
 
@@ -151,7 +151,7 @@ ${suggestedLinks.trim()}
    * 2. Standup (Retrieve recent context)
    */
   public async generateStandup(planFile: TFile): Promise<void> {
-    new Notice("Running Agentic Standup (Gathering Context via Graph & Time)...");
+    new Notice("執行代理晨間簡報（通過圖表與時間蒐集背景資訊）...");
 
     try {
       const planContent = await this.app.vault.read(planFile);

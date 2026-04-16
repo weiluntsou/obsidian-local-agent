@@ -35,22 +35,22 @@ import {
 } from "./settings";
 
 
-const MAP_SUMMARY_SYSTEM_PROMPT = `You are a concise summariser. Read the following note and produce exactly ONE sentence that captures the core idea or theme. Do not add any preamble — respond with the single sentence only.`;
+const MAP_SUMMARY_SYSTEM_PROMPT = `你是一位精準的內容摘要器。請閱讀以下筆記，並生成恰好一句話來捕捉其核心思想或主題。不要增加任何前言——直接回應那個獨立的句子即可。`;
 
-const REDUCE_INSIGHT_SYSTEM_PROMPT = `You are an analytical research assistant. You will receive a numbered list of one-sentence summaries from different notes written over a period of time.
+const REDUCE_INSIGHT_SYSTEM_PROMPT = `你是一位分析型研究助理。你將收到來自在一段時間內所寫筆記的若干個單句摘要（numbered list）。
 
-Your task:
-1. Identify recurring themes, patterns, or emerging connections across the summaries.
-2. Highlight any contradictions or evolving viewpoints.
-3. Suggest actionable next steps or open questions.
+你的任務：
+1. 識別摘要間的循環主題、規律或新興連結。
+2. 突顯任何矛盾或觀點的演變。
+3. 建議可行的後續步驟或開放性問題。
 
-Format your response as a well-structured markdown report with the following sections:
-## Recurring Themes
-## Key Connections
-## Contradictions & Tensions
-## Open Questions & Next Steps
+請將回應格式設為結構良好的 Markdown（標記語言）報告，包含以下章節：
+## 循環主題
+## 關鍵連結
+## 矛盾與張力
+## 開放性問題與後續步驟
 
-Be insightful and specific. Reference summary numbers (e.g. "[3]") when citing evidence.`;
+請深思熟慮且具體說明。引用時請使用摘要編號（例如 "[3]"）作為證據。`;
 
 // ---------------------------------------------------------------------------
 // Plugin Class
@@ -86,19 +86,19 @@ export default class LocalAgentPlugin extends Plugin {
     // ----- UI Elements -----------------------------------------------------
 
     // Add a Ribbon Icon (Start Button) on the left sidebar
-    const ribbonIconEl = this.addRibbonIcon('bot', 'Start Classification (Active Note)', (evt: MouseEvent) => {
+    const ribbonIconEl = this.addRibbonIcon('bot', '開始分類（目前筆記）', (evt: MouseEvent) => {
       this.classifyActiveNote();
     });
     ribbonIconEl.addClass('local-agent-ribbon-class');
 
     // Add another Ribbon Icon for the Note Refiner
-    const refinerIconEl = this.addRibbonIcon('sparkles', 'Refine Active Note (Summary, Highlight, Atomize)', (evt: MouseEvent) => {
+    const refinerIconEl = this.addRibbonIcon('sparkles', '精修目前筆記（摘要、重點提取、原子化）', (evt: MouseEvent) => {
       this.refineActiveNote();
     });
     refinerIconEl.addClass('local-agent-refine-class');
 
     // Add another Ribbon Icon for the Article Processor
-    const articleIconEl = this.addRibbonIcon('book-open', 'Process Inbox Articles (Batch Process)', (evt: MouseEvent) => {
+    const articleIconEl = this.addRibbonIcon('book-open', '處理收件箱文章（批次處理）', (evt: MouseEvent) => {
       this.processInboxArticles();
     });
     articleIconEl.addClass('local-agent-article-class');
@@ -108,42 +108,42 @@ export default class LocalAgentPlugin extends Plugin {
     // Module 2: Classify the active note
     this.addCommand({
       id: "classify-active-note",
-      name: "Classify Active Note (Tags & Category)",
+      name: "分類目前筆記（標籤和分類）",
       callback: () => this.classifyActiveNote(),
     });
 
     // Module 3: Run Map-Reduce Aggregation
     this.addCommand({
       id: "run-map-reduce",
-      name: "Run Map-Reduce Aggregation on Input Folder",
+      name: "執行地圖-約化（Map-Reduce）聚合（特定資料夾）",
       callback: () => this.runMapReduce(),
     });
 
     // Module 4: Refine Active Note
     this.addCommand({
       id: "refine-active-note",
-      name: "Refine Active Note (Summary, Highlight, Atomize, Classify)",
+      name: "精修目前筆記（摘要、重點提取、原子化、分類）",
       callback: () => this.refineActiveNote(),
     });
 
     // Module 5: Process Article Note
     this.addCommand({
       id: "process-inbox-articles",
-      name: "Process Inbox Articles (Batch Format with Atomization)",
+      name: "處理收件箱文章（批次格式化，含原子化）",
       callback: () => this.processInboxArticles(),
     });
 
     // Cancel Processing
     this.addCommand({
       id: "cancel-local-agent-processing",
-      name: "Cancel Current Processing Task",
+      name: "取消目前處理任務",
       callback: () => {
         if (this.isProcessing) {
           this.cancelProcessing = true;
-          new Notice("Cancelling background tasks...");
-          this.setStatusBarText("Cancelling...");
+          new Notice("正在取消背景任務...");
+          this.setStatusBarText("取消中...");
         } else {
-          new Notice("No tasks are currently running.");
+          new Notice("目前沒有正在執行的任務。");
         }
       },
     });
@@ -151,25 +151,25 @@ export default class LocalAgentPlugin extends Plugin {
     // Module 6: Writing Agent Commands
     this.addCommand({
       id: "writer-init-project",
-      name: "Writer: Initialize Writing Project (plan.md)",
+      name: "寫作代理：初始化寫作專案（plan.md）",
       callback: () => this.handleWriterInit(),
     });
 
     this.addCommand({
       id: "writer-om-standup",
-      name: "Writer: Morning Standup (Gather Context from Last 3 Days)",
+      name: "寫作代理：晨間簡報（蒐集過去 3 天的背景資訊）",
       callback: () => this.handleWriterAction("standup"),
     });
 
     this.addCommand({
       id: "writer-draft-article",
-      name: "Writer: Draft Article (from plan.md)",
+      name: "寫作代理：草擬文章（從 plan.md）",
       callback: () => this.handleWriterAction("draft"),
     });
 
     this.addCommand({
       id: "writer-sweep-draft",
-      name: "Writer: Sweep & Feedback (Review Draft with Knowledge Base)",
+      name: "寫作代理：掃除與回饋（用知識庫審核草稿）",
       callback: () => this.handleWriterAction("sweep"),
     });
   }
