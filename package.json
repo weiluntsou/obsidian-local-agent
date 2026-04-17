@@ -1,6 +1,6 @@
 {
   "name": "obsidian-local-agent",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "An Obsidian plugin that interfaces with local LLMs for automated knowledge management.",
   "main": "main.js",
   "scripts": {
@@ -14,7 +14,15 @@
     "local-ai",
     "knowledge-management"
   ],
-  "author": "",
+  "author": "Weiluntsou",
+  "homepage": "https://github.com/weiluntsou/obsidian-local-agent",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/weiluntsou/obsidian-local-agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/weiluntsou/obsidian-local-agent/issues"
+  },
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.14.0",
