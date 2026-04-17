@@ -21,7 +21,9 @@ Obsidian Local Agent interfaces with your local, private LLM (via **Ollama** or 
 
 ## 📦 Installation
 
-### Option 1: Using BRAT (Recommended for Beta Testing)
+> **Note:** This plugin is currently in early Beta (v0.0.1) and has not yet been officially submitted to the Obsidian Community Plugins directory. Until then, you can easily install and automatically update it using BRAT.
+
+### Option 1: Using BRAT (Recommended for Unlisted/Beta Plugins)
 1. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin from the Obsidian Community Plugins.
 2. Enable BRAT in your settings.
 3. Open BRAT settings, go to the "Add Beta plugin" section.
