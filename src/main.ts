@@ -28,6 +28,7 @@ import { ClassificationEngine } from "./classifier";
 import { NoteRefinerEngine } from "./refiner";
 import { ArticleProcessorEngine } from "./articleProcessor";
 import { WriterEngine, TopicInputModal } from "./writer";
+import { CleanerEngine } from "./cleaner";
 import {
   DEFAULT_SETTINGS,
   LocalAgentSettings,
@@ -103,6 +104,22 @@ export default class LocalAgentPlugin extends Plugin {
     });
     articleIconEl.addClass('local-agent-article-class');
 
+    // Add Context Menu: Right-Click on File in File Explorer
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu, file) => {
+        if (file instanceof TFile && file.extension === "md") {
+          menu.addItem((item) => {
+            item
+              .setTitle("CPR 知識清掃與自我修復")
+              .setIcon("wrench")
+              .onClick(() => {
+                this.cleanSpecificNote(file);
+              });
+          });
+        }
+      })
+    );
+
     // ----- Commands --------------------------------------------------------
 
     // Module 2: Classify the active note
@@ -171,6 +188,20 @@ export default class LocalAgentPlugin extends Plugin {
       id: "writer-sweep-draft",
       name: "寫作代理：掃除與回饋（用知識庫審核草稿）",
       callback: () => this.handleWriterAction("sweep"),
+    });
+
+    // Module 7: Cleaner Engine Command
+    this.addCommand({
+      id: "cpr-clean-note",
+      name: "CPR 知識清掃與自我修復（目前筆記）",
+      callback: () => {
+        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (activeView && activeView.file) {
+          this.cleanSpecificNote(activeView.file);
+        } else {
+          new Notice("請先開啟一篇筆記來進行清掃！");
+        }
+      },
     });
   }
 
@@ -346,6 +377,34 @@ export default class LocalAgentPlugin extends Plugin {
     } finally {
       this.isProcessing = false;
       this.cancelProcessing = false;
+      this.setStatusBarText("");
+    }
+  }
+
+  // ========================================================================
+  // MODULE 7 — Cleaner Engine
+  // ========================================================================
+
+  private async cleanSpecificNote(file: TFile): Promise<void> {
+    if (this.isProcessing) {
+      new Notice("Local Agent 正在執行其他任務，請稍候。");
+      return;
+    }
+
+    this.isProcessing = true;
+    this.setStatusBarText(`Cleaning Note: ${file.basename}...`);
+    try {
+      const engine = new CleanerEngine(
+        this.app,
+        this.apiClient,
+        this.settings.refinementTemperature
+      );
+      await engine.cleanFile(file);
+    } catch (err) {
+      console.error("[Local Agent] Cleaner error:", err);
+      new Notice(`清掃失敗：${(err as Error).message}`);
+    } finally {
+      this.isProcessing = false;
       this.setStatusBarText("");
     }
   }
