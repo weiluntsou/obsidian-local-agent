@@ -1,6 +1,23 @@
 import { App, TFile, Notice, normalizePath } from "obsidian";
 import { LocalLLMClient } from "./api";
 
+/**
+ * Ontology snapshot: captures the semantic relationships (wikilinks,
+ * tags, frontmatter properties) of a note before any LLM rewriting.
+ * After processing, any links or tags missing from the LLM output
+ * are re-injected to preserve the knowledge graph.
+ */
+interface OntologySnapshot {
+  /** All [[wikilink]] targets found in the original body text. */
+  wikilinks: string[];
+  /** All #tags found in the original body text (not frontmatter). */
+  inlineTags: string[];
+  /** Frontmatter tags (array of strings without leading #). */
+  frontmatterTags: string[];
+  /** Frontmatter key-value pairs to preserve across rewrites. */
+  preservedFrontmatter: Record<string, unknown>;
+}
+
 const PILLARS = [
   "10_工作與管理",
   "20_學術與電腦科學",
@@ -79,6 +96,12 @@ export class ArticleProcessorEngine {
       
       const today = new Date().toISOString().split("T")[0];
       
+      // ── Ontology Preservation: capture relationships before rewrite ──
+      const ontology = this.captureOntology(content);
+
+      // ── Change Checkpoint: save a snapshot before destructive rewrite ──
+      await this.saveCheckpoint(file, content);
+
       const systemPrompt = ARTICLE_PROCESSOR_PROMPT
           .replace(/\{CAPTURED_DATE\}/g, today)
           .replace(/\{SOURCE_URL\}/g, sourceUrl || "[填寫原文網址，若無則留空]");
@@ -160,6 +183,9 @@ export class ArticleProcessorEngine {
       const llmFmString = llmFmMatch ? llmFmMatch[1] : "";
       const finalBody = finalMarkdown.replace(/^---\n[\s\S]*?\n---\n*/, "").trim();
 
+      // ── Ontology Re-injection: restore any missing wikilinks & tags ──
+      const ontologyRestoredBody = this.restoreOntology(finalBody, ontology);
+
       // Get original frontmatter
       const originalFmMatch = content.match(/^---\n([\s\S]*?)\n---/);
       const originalFmFull = originalFmMatch ? originalFmMatch[0] + "\n" : "";
@@ -175,26 +201,33 @@ export class ArticleProcessorEngine {
       }
 
       // Overwrite file with Original Frontmatter + LLM Body + Saved Images
-      await this.app.vault.modify(file, originalFmFull + finalBody + imagesSection);
+      await this.app.vault.modify(file, originalFmFull + ontologyRestoredBody + imagesSection);
 
       // Now merge newly discovered properties safely using Obsidian API
       await this.app.fileManager.processFrontMatter(file, (fm) => {
+         // Preserve all original frontmatter keys that the LLM doesn't manage
+         for (const [key, value] of Object.entries(ontology.preservedFrontmatter)) {
+           if (!(key in fm)) {
+             fm[key] = value;
+           }
+         }
+
          fm["type"] = "reference";
          fm["captured"] = today;
          if (sourceUrl) fm["source"] = sourceUrl;
          if (finalCategory) fm["category"] = finalCategory;
          
          const tagsMatch = llmFmString.match(/tags:\s*(.+)/i);
+         let rawTags: string[] = [];
          if (tagsMatch) {
-            const rawTags = tagsMatch[1]
+            rawTags = tagsMatch[1]
                .replace(/[\[\]"',]/g, " ")
                .split(/\s+/)
                .filter(t => t.length > 0 && t !== "#web-clippings")
                .map(t => t.replace(/^#/, ""));
-            
-            const existingTags = Array.isArray(fm["tags"]) ? fm["tags"].map((t: string) => t.replace(/^#/, "")) : [];
-            fm["tags"] = Array.from(new Set([...existingTags, ...rawTags, "web-clippings"]));
          }
+         const existingTags = Array.isArray(fm["tags"]) ? fm["tags"].map((t: string) => t.replace(/^#/, "")) : [];
+         fm["tags"] = Array.from(new Set([...existingTags, ...rawTags, ...ontology.frontmatterTags, "web-clippings"]));
       });
 
       if (finalCategory) {
@@ -254,5 +287,182 @@ ${content}
     // Define the new location
     const newPath = normalizePath(`${category}/${file.name}`);
     await this.app.vault.rename(file, newPath);
+  }
+
+  // ========================================================================
+  // Ontology Preservation
+  // ========================================================================
+
+  private stripFrontmatter(content: string): string {
+    const fmRegex = /^---\s*\n[\s\S]*?\n---\s*\n?/;
+    return content.replace(fmRegex, "").trim();
+  }
+
+  /**
+   * Capture the semantic ontology of a note before LLM rewriting.
+   * This includes wikilinks, inline tags, and frontmatter properties.
+   */
+  private captureOntology(content: string): OntologySnapshot {
+    // Extract wikilinks: [[Target]] or [[Target|Alias]]
+    const wikilinkRegex = /\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g;
+    const wikilinks: string[] = [];
+    let m;
+    while ((m = wikilinkRegex.exec(content)) !== null) {
+      wikilinks.push(m[1].trim());
+    }
+
+    // Extract inline #tags from body (not frontmatter)
+    const body = this.stripFrontmatter(content);
+    const tagRegex = /(?:^|\s)#([\w\-\/]+)/g;
+    const inlineTags: string[] = [];
+    while ((m = tagRegex.exec(body)) !== null) {
+      inlineTags.push(m[1]);
+    }
+
+    // Extract frontmatter tags and all preserved properties
+    const fmMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
+    const frontmatterTags: string[] = [];
+    const preservedFrontmatter: Record<string, unknown> = {};
+
+    if (fmMatch) {
+      const fmBlock = fmMatch[1];
+      // Simple YAML key extraction for preservation
+      const lines = fmBlock.split("\n");
+      let currentKey = "";
+      for (const line of lines) {
+        const keyMatch = line.match(/^(\w[\w-]*):\s*(.*)/);
+        if (keyMatch) {
+          currentKey = keyMatch[1];
+          const value = keyMatch[2].trim();
+          if (value && !value.startsWith("[") && value !== "") {
+            preservedFrontmatter[currentKey] = value;
+          }
+        }
+      }
+
+      // Extract frontmatter tags array
+      const tagsMatch = fmBlock.match(/tags:\s*\n((?:\s+-\s+.+\n?)*)/i);
+      if (tagsMatch) {
+        const tagLines = tagsMatch[1].split("\n");
+        for (const tl of tagLines) {
+          const t = tl.replace(/^\s*-\s*/, "").replace(/^#/, "").trim();
+          if (t) frontmatterTags.push(t);
+        }
+      } else {
+        // Inline tags format: tags: [tag1, tag2]
+        const inlineTagsMatch = fmBlock.match(/tags:\s*\[([^\]]*)\]/i);
+        if (inlineTagsMatch) {
+          const parts = inlineTagsMatch[1].split(",");
+          for (const p of parts) {
+            const t = p.replace(/["'#]/g, "").trim();
+            if (t) frontmatterTags.push(t);
+          }
+        }
+      }
+    }
+
+    return {
+      wikilinks: Array.from(new Set(wikilinks)),
+      inlineTags: Array.from(new Set(inlineTags)),
+      frontmatterTags: Array.from(new Set(frontmatterTags)),
+      preservedFrontmatter,
+    };
+  }
+
+  /**
+   * Re-inject any wikilinks and inline tags that existed in the original
+   * note but are absent from the LLM-rewritten body.
+   */
+  private restoreOntology(refinedBody: string, ontology: OntologySnapshot): string {
+    // Find which original wikilinks are missing from the new content
+    const missingLinks: string[] = [];
+    for (const link of ontology.wikilinks) {
+      if (!refinedBody.includes(`[[${link}`)) {
+        missingLinks.push(link);
+      }
+    }
+
+    // Find which original inline tags are missing
+    const missingTags: string[] = [];
+    for (const tag of ontology.inlineTags) {
+      if (!refinedBody.includes(`#${tag}`)) {
+        missingTags.push(tag);
+      }
+    }
+
+    // If nothing is missing, return as-is
+    if (missingLinks.length === 0 && missingTags.length === 0) {
+      return refinedBody;
+    }
+
+    // Build an "Ontology Preserved" section
+    const parts: string[] = [refinedBody];
+    parts.push("");
+    parts.push("## 本體論保留區（Preserved Ontology）");
+    parts.push("> 以下連結與標籤來自原始筆記，由系統自動保留以維護知識圖譜完整性。");
+    parts.push("");
+
+    if (missingLinks.length > 0) {
+      parts.push("**保留的雙向連結（Preserved Wikilinks）：**");
+      for (const link of missingLinks) {
+        parts.push(`- [[${link}]]`);
+      }
+      parts.push("");
+    }
+
+    if (missingTags.length > 0) {
+      parts.push("**保留的標籤（Preserved Tags）：**");
+      parts.push(missingTags.map(t => `#${t}`).join(" "));
+      parts.push("");
+    }
+
+    return parts.join("\n");
+  }
+
+  // ========================================================================
+  // Change Checkpoint System
+  // ========================================================================
+
+  /**
+   * Save a full snapshot of the file content before destructive rewriting.
+   * Checkpoints are stored in `_checkpoints/<basename>/` with timestamped
+   * filenames so the user can diff or roll back at any time.
+   */
+  private async saveCheckpoint(file: TFile, content: string): Promise<void> {
+    try {
+      const checkpointDir = normalizePath(`_checkpoints/${file.basename}`);
+      const existingDir = this.app.vault.getAbstractFileByPath(checkpointDir);
+      if (!existingDir) {
+        await this.app.vault.createFolder(checkpointDir);
+      }
+
+      const now = new Date();
+      const ts = now.toISOString().replace(/[:.]/g, "-");
+      const checkpointPath = normalizePath(
+        `${checkpointDir}/${file.basename}_${ts}.md`
+      );
+
+      const header = [
+        "---",
+        "type: checkpoint",
+        `source: "[[${file.basename}]]"`,
+        `checkpoint_created: ${now.toISOString()}`,
+        `original_path: "${file.path}"`,
+        "---",
+        "",
+        "> [!warning] 此為自動保存的變更檢查點（Checkpoint）",
+        `> 原始檔案：[[${file.basename}]]`,
+        `> 快照時間：${now.toISOString()}`,
+        "",
+        "---",
+        "",
+      ].join("\n");
+
+      await this.app.vault.create(checkpointPath, header + content);
+      console.log(`[ArticleProcessorEngine] Checkpoint saved: ${checkpointPath}`);
+    } catch (err) {
+      // Non-fatal: log but don't block the main flow
+      console.warn("[ArticleProcessorEngine] Failed to save checkpoint:", err);
+    }
   }
 }

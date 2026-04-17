@@ -395,6 +395,8 @@ var NoteRefinerEngine = class {
         new import_obsidian3.Notice("\u7B46\u8A18\u70BA\u7A7A\u3002\u6C92\u6709\u5167\u5BB9\u9700\u8981\u7CBE\u4FEE\u3002");
         return;
       }
+      const ontology = this.captureOntology(originalContent);
+      await this.saveCheckpoint(file, originalContent);
       new import_obsidian3.Notice(`\u6B63\u5728\u7CBE\u4FEE\u300C${file.basename}\u300D...\u9019\u53EF\u80FD\u9700\u8981\u4E00\u4E9B\u6642\u9593\u3002`);
       const rawResponse = await this.apiClient.prompt(
         REFINER_SYSTEM_PROMPT,
@@ -411,13 +413,14 @@ var NoteRefinerEngine = class {
       if (parsed.atomicNotes && Array.isArray(parsed.atomicNotes)) {
         for (const atomic of parsed.atomicNotes) {
           const fileName = this.sanitizeFileName(atomic.title);
-          const link = await this.createAtomicNote(fileName, atomic, parsed.category);
+          const link = await this.createAtomicNote(fileName, atomic, parsed.category, file.basename);
           if (link) {
             atomicLinks.push(link);
           }
         }
       }
       const refinedBody = this.buildRefinedContent(parsed, atomicLinks);
+      const ontologyRestoredBody = this.restoreOntology(refinedBody, ontology);
       let finalCategory = parsed.category;
       if (!PILLARS2.includes(finalCategory)) {
         finalCategory = "00_\u6536\u4EF6\u7BB1";
@@ -433,15 +436,21 @@ var NoteRefinerEngine = class {
         }
       }
       await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+        for (const [key, value] of Object.entries(ontology.preservedFrontmatter)) {
+          if (!(key in frontmatter)) {
+            frontmatter[key] = value;
+          }
+        }
         frontmatter["category"] = finalCategory;
         const existingTags = Array.isArray(frontmatter["tags"]) ? frontmatter["tags"] : [];
-        frontmatter["tags"] = Array.from(/* @__PURE__ */ new Set([...existingTags, ...tagsToAdd]));
+        const allTags = [...existingTags, ...tagsToAdd, ...ontology.frontmatterTags];
+        frontmatter["tags"] = Array.from(new Set(allTags));
         frontmatter["refined"] = true;
       });
       const contentWithNewFrontmatter = await this.app.vault.read(file);
       const frontmatterMatch = contentWithNewFrontmatter.match(/^---\s*\n[\s\S]*?\n---\s*\n?/);
       const frontmatterStr = frontmatterMatch ? frontmatterMatch[0] : "";
-      const newFullContent = frontmatterStr + refinedBody;
+      const newFullContent = frontmatterStr + ontologyRestoredBody;
       await this.app.vault.modify(file, newFullContent);
       if (shouldMove) {
         await this.moveFileToCategory(file, finalCategory);
@@ -487,7 +496,11 @@ var NoteRefinerEngine = class {
     parts.push(`%% AI_Refined_at: ${timestamp} %%`);
     return parts.join("\n");
   }
-  async createAtomicNote(fileName, data, category) {
+  /**
+   * Create an atomic note with an ontology-aware back-link to its source note,
+   * preserving the knowledge graph's bidirectional connectivity.
+   */
+  async createAtomicNote(fileName, data, category, sourceName) {
     try {
       let finalCategory = category;
       if (!PILLARS2.includes(finalCategory)) {
@@ -506,14 +519,17 @@ var NoteRefinerEngine = class {
       }
       const timestamp = (/* @__PURE__ */ new Date()).toISOString();
       const tagsStr = data.tags && data.tags.length > 0 ? `tags:
-  - ${data.tags.map((t) => t.replace(/^#/, "")).join("\\n  - ")}` : "tags: []";
+  - ${data.tags.map((t) => t.replace(/^#/, "")).join("\n  - ")}` : "tags: []";
+      const sourceLink = sourceName ? `\u4F86\u6E90\u7B46\u8A18\uFF1A[[${sourceName}]]
+
+` : "";
       const fullContent = `---
 type: atomic-note
 category: ${finalCategory}
 ${tagsStr}
 created: ${timestamp}
 ---
-
+${sourceLink}
 # ${fileName}
 
 ${data.content}
@@ -540,6 +556,148 @@ ${data.content}
   stripFrontmatter(content) {
     const fmRegex = /^---\s*\n[\s\S]*?\n---\s*\n?/;
     return content.replace(fmRegex, "").trim();
+  }
+  // ========================================================================
+  // Ontology Preservation
+  // ========================================================================
+  /**
+   * Capture the semantic ontology of a note before LLM rewriting.
+   * This includes wikilinks, inline tags, and frontmatter properties.
+   */
+  captureOntology(content) {
+    const wikilinkRegex = /\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g;
+    const wikilinks = [];
+    let m;
+    while ((m = wikilinkRegex.exec(content)) !== null) {
+      wikilinks.push(m[1].trim());
+    }
+    const body = this.stripFrontmatter(content);
+    const tagRegex = /(?:^|\s)#([\w\-\/]+)/g;
+    const inlineTags = [];
+    while ((m = tagRegex.exec(body)) !== null) {
+      inlineTags.push(m[1]);
+    }
+    const fmMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
+    const frontmatterTags = [];
+    const preservedFrontmatter = {};
+    if (fmMatch) {
+      const fmBlock = fmMatch[1];
+      const lines = fmBlock.split("\n");
+      let currentKey = "";
+      for (const line of lines) {
+        const keyMatch = line.match(/^(\w[\w-]*):\s*(.*)/);
+        if (keyMatch) {
+          currentKey = keyMatch[1];
+          const value = keyMatch[2].trim();
+          if (value && !value.startsWith("[") && value !== "") {
+            preservedFrontmatter[currentKey] = value;
+          }
+        }
+      }
+      const tagsMatch = fmBlock.match(/tags:\s*\n((?:\s+-\s+.+\n?)*)/i);
+      if (tagsMatch) {
+        const tagLines = tagsMatch[1].split("\n");
+        for (const tl of tagLines) {
+          const t = tl.replace(/^\s*-\s*/, "").replace(/^#/, "").trim();
+          if (t) frontmatterTags.push(t);
+        }
+      } else {
+        const inlineTagsMatch = fmBlock.match(/tags:\s*\[([^\]]*)\]/i);
+        if (inlineTagsMatch) {
+          const parts = inlineTagsMatch[1].split(",");
+          for (const p of parts) {
+            const t = p.replace(/["'#]/g, "").trim();
+            if (t) frontmatterTags.push(t);
+          }
+        }
+      }
+    }
+    return {
+      wikilinks: Array.from(new Set(wikilinks)),
+      inlineTags: Array.from(new Set(inlineTags)),
+      frontmatterTags: Array.from(new Set(frontmatterTags)),
+      preservedFrontmatter
+    };
+  }
+  /**
+   * Re-inject any wikilinks and inline tags that existed in the original
+   * note but are absent from the LLM-rewritten body.
+   */
+  restoreOntology(refinedBody, ontology) {
+    const missingLinks = [];
+    for (const link of ontology.wikilinks) {
+      if (!refinedBody.includes(`[[${link}`)) {
+        missingLinks.push(link);
+      }
+    }
+    const missingTags = [];
+    for (const tag of ontology.inlineTags) {
+      if (!refinedBody.includes(`#${tag}`)) {
+        missingTags.push(tag);
+      }
+    }
+    if (missingLinks.length === 0 && missingTags.length === 0) {
+      return refinedBody;
+    }
+    const parts = [refinedBody];
+    parts.push("");
+    parts.push("## \u672C\u9AD4\u8AD6\u4FDD\u7559\u5340\uFF08Preserved Ontology\uFF09");
+    parts.push("> \u4EE5\u4E0B\u9023\u7D50\u8207\u6A19\u7C64\u4F86\u81EA\u539F\u59CB\u7B46\u8A18\uFF0C\u7531\u7CFB\u7D71\u81EA\u52D5\u4FDD\u7559\u4EE5\u7DAD\u8B77\u77E5\u8B58\u5716\u8B5C\u5B8C\u6574\u6027\u3002");
+    parts.push("");
+    if (missingLinks.length > 0) {
+      parts.push("**\u4FDD\u7559\u7684\u96D9\u5411\u9023\u7D50\uFF08Preserved Wikilinks\uFF09\uFF1A**");
+      for (const link of missingLinks) {
+        parts.push(`- [[${link}]]`);
+      }
+      parts.push("");
+    }
+    if (missingTags.length > 0) {
+      parts.push("**\u4FDD\u7559\u7684\u6A19\u7C64\uFF08Preserved Tags\uFF09\uFF1A**");
+      parts.push(missingTags.map((t) => `#${t}`).join(" "));
+      parts.push("");
+    }
+    return parts.join("\n");
+  }
+  // ========================================================================
+  // Change Checkpoint System
+  // ========================================================================
+  /**
+   * Save a full snapshot of the file content before destructive rewriting.
+   * Checkpoints are stored in `_checkpoints/<basename>/` with timestamped
+   * filenames so the user can diff or roll back at any time.
+   */
+  async saveCheckpoint(file, content) {
+    try {
+      const checkpointDir = (0, import_obsidian3.normalizePath)(`_checkpoints/${file.basename}`);
+      const existingDir = this.app.vault.getAbstractFileByPath(checkpointDir);
+      if (!existingDir) {
+        await this.app.vault.createFolder(checkpointDir);
+      }
+      const now = /* @__PURE__ */ new Date();
+      const ts = now.toISOString().replace(/[:.]/g, "-");
+      const checkpointPath = (0, import_obsidian3.normalizePath)(
+        `${checkpointDir}/${file.basename}_${ts}.md`
+      );
+      const header = [
+        "---",
+        "type: checkpoint",
+        `source: "[[${file.basename}]]"`,
+        `checkpoint_created: ${now.toISOString()}`,
+        `original_path: "${file.path}"`,
+        "---",
+        "",
+        "> [!warning] \u6B64\u70BA\u81EA\u52D5\u4FDD\u5B58\u7684\u8B8A\u66F4\u6AA2\u67E5\u9EDE\uFF08Checkpoint\uFF09",
+        `> \u539F\u59CB\u6A94\u6848\uFF1A[[${file.basename}]]`,
+        `> \u5FEB\u7167\u6642\u9593\uFF1A${now.toISOString()}`,
+        "",
+        "---",
+        ""
+      ].join("\n");
+      await this.app.vault.create(checkpointPath, header + content);
+      console.log(`[NoteRefinerEngine] Checkpoint saved: ${checkpointPath}`);
+    } catch (err) {
+      console.warn("[NoteRefinerEngine] Failed to save checkpoint:", err);
+    }
   }
 };
 
@@ -616,6 +774,8 @@ var ArticleProcessorEngine = class {
       const urlMatch = content.match(/URL:\s*(https?:\/\/[^\s]+)/i) || content.match(/Source:\s*(https?:\/\/[^\s]+)/i);
       const sourceUrl = urlMatch ? urlMatch[1] : "";
       const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+      const ontology = this.captureOntology(content);
+      await this.saveCheckpoint(file, content);
       const systemPrompt = ARTICLE_PROCESSOR_PROMPT.replace(/\{CAPTURED_DATE\}/g, today).replace(/\{SOURCE_URL\}/g, sourceUrl || "[\u586B\u5BEB\u539F\u6587\u7DB2\u5740\uFF0C\u82E5\u7121\u5247\u7559\u7A7A]");
       new import_obsidian4.Notice(`\u6B63\u5728\u8655\u7406\u6587\u7AE0\u300C${file.basename}\u300D...\u9019\u53EF\u80FD\u9700\u8981\u4E00\u4E9B\u6642\u9593\u3002`);
       const rawResponse = await this.apiClient.prompt(
@@ -675,6 +835,7 @@ var ArticleProcessorEngine = class {
       const llmFmMatch = finalMarkdown.match(/^---\n([\s\S]*?)\n---/);
       const llmFmString = llmFmMatch ? llmFmMatch[1] : "";
       const finalBody = finalMarkdown.replace(/^---\n[\s\S]*?\n---\n*/, "").trim();
+      const ontologyRestoredBody = this.restoreOntology(finalBody, ontology);
       const originalFmMatch = content.match(/^---\n([\s\S]*?)\n---/);
       const originalFmFull = originalFmMatch ? originalFmMatch[0] + "\n" : "";
       const imageRegex = /<img\s+[^>]*src="[^"]+"[^>]*>|!\[.*?\]\(.*?\)|\!\[\[.*?\]\]/gi;
@@ -684,18 +845,24 @@ var ArticleProcessorEngine = class {
       if (uniqueImages.length > 0) {
         imagesSection = "\n\n## \u539F\u59CB\u9644\u5716\uFF08\u4FDD\u7559\u7684\u5716\u50CF\uFF09\n" + uniqueImages.join("\n\n") + "\n";
       }
-      await this.app.vault.modify(file, originalFmFull + finalBody + imagesSection);
+      await this.app.vault.modify(file, originalFmFull + ontologyRestoredBody + imagesSection);
       await this.app.fileManager.processFrontMatter(file, (fm) => {
+        for (const [key, value] of Object.entries(ontology.preservedFrontmatter)) {
+          if (!(key in fm)) {
+            fm[key] = value;
+          }
+        }
         fm["type"] = "reference";
         fm["captured"] = today;
         if (sourceUrl) fm["source"] = sourceUrl;
         if (finalCategory) fm["category"] = finalCategory;
         const tagsMatch = llmFmString.match(/tags:\s*(.+)/i);
+        let rawTags = [];
         if (tagsMatch) {
-          const rawTags = tagsMatch[1].replace(/[\[\]"',]/g, " ").split(/\s+/).filter((t) => t.length > 0 && t !== "#web-clippings").map((t) => t.replace(/^#/, ""));
-          const existingTags = Array.isArray(fm["tags"]) ? fm["tags"].map((t) => t.replace(/^#/, "")) : [];
-          fm["tags"] = Array.from(/* @__PURE__ */ new Set([...existingTags, ...rawTags, "web-clippings"]));
+          rawTags = tagsMatch[1].replace(/[\[\]"',]/g, " ").split(/\s+/).filter((t) => t.length > 0 && t !== "#web-clippings").map((t) => t.replace(/^#/, ""));
         }
+        const existingTags = Array.isArray(fm["tags"]) ? fm["tags"].map((t) => t.replace(/^#/, "")) : [];
+        fm["tags"] = Array.from(/* @__PURE__ */ new Set([...existingTags, ...rawTags, ...ontology.frontmatterTags, "web-clippings"]));
       });
       if (finalCategory) {
         await this.moveFileToCategory(file, finalCategory);
@@ -743,6 +910,152 @@ ${content}
     }
     const newPath = (0, import_obsidian4.normalizePath)(`${category}/${file.name}`);
     await this.app.vault.rename(file, newPath);
+  }
+  // ========================================================================
+  // Ontology Preservation
+  // ========================================================================
+  stripFrontmatter(content) {
+    const fmRegex = /^---\s*\n[\s\S]*?\n---\s*\n?/;
+    return content.replace(fmRegex, "").trim();
+  }
+  /**
+   * Capture the semantic ontology of a note before LLM rewriting.
+   * This includes wikilinks, inline tags, and frontmatter properties.
+   */
+  captureOntology(content) {
+    const wikilinkRegex = /\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g;
+    const wikilinks = [];
+    let m;
+    while ((m = wikilinkRegex.exec(content)) !== null) {
+      wikilinks.push(m[1].trim());
+    }
+    const body = this.stripFrontmatter(content);
+    const tagRegex = /(?:^|\s)#([\w\-\/]+)/g;
+    const inlineTags = [];
+    while ((m = tagRegex.exec(body)) !== null) {
+      inlineTags.push(m[1]);
+    }
+    const fmMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
+    const frontmatterTags = [];
+    const preservedFrontmatter = {};
+    if (fmMatch) {
+      const fmBlock = fmMatch[1];
+      const lines = fmBlock.split("\n");
+      let currentKey = "";
+      for (const line of lines) {
+        const keyMatch = line.match(/^(\w[\w-]*):\s*(.*)/);
+        if (keyMatch) {
+          currentKey = keyMatch[1];
+          const value = keyMatch[2].trim();
+          if (value && !value.startsWith("[") && value !== "") {
+            preservedFrontmatter[currentKey] = value;
+          }
+        }
+      }
+      const tagsMatch = fmBlock.match(/tags:\s*\n((?:\s+-\s+.+\n?)*)/i);
+      if (tagsMatch) {
+        const tagLines = tagsMatch[1].split("\n");
+        for (const tl of tagLines) {
+          const t = tl.replace(/^\s*-\s*/, "").replace(/^#/, "").trim();
+          if (t) frontmatterTags.push(t);
+        }
+      } else {
+        const inlineTagsMatch = fmBlock.match(/tags:\s*\[([^\]]*)\]/i);
+        if (inlineTagsMatch) {
+          const parts = inlineTagsMatch[1].split(",");
+          for (const p of parts) {
+            const t = p.replace(/["'#]/g, "").trim();
+            if (t) frontmatterTags.push(t);
+          }
+        }
+      }
+    }
+    return {
+      wikilinks: Array.from(new Set(wikilinks)),
+      inlineTags: Array.from(new Set(inlineTags)),
+      frontmatterTags: Array.from(new Set(frontmatterTags)),
+      preservedFrontmatter
+    };
+  }
+  /**
+   * Re-inject any wikilinks and inline tags that existed in the original
+   * note but are absent from the LLM-rewritten body.
+   */
+  restoreOntology(refinedBody, ontology) {
+    const missingLinks = [];
+    for (const link of ontology.wikilinks) {
+      if (!refinedBody.includes(`[[${link}`)) {
+        missingLinks.push(link);
+      }
+    }
+    const missingTags = [];
+    for (const tag of ontology.inlineTags) {
+      if (!refinedBody.includes(`#${tag}`)) {
+        missingTags.push(tag);
+      }
+    }
+    if (missingLinks.length === 0 && missingTags.length === 0) {
+      return refinedBody;
+    }
+    const parts = [refinedBody];
+    parts.push("");
+    parts.push("## \u672C\u9AD4\u8AD6\u4FDD\u7559\u5340\uFF08Preserved Ontology\uFF09");
+    parts.push("> \u4EE5\u4E0B\u9023\u7D50\u8207\u6A19\u7C64\u4F86\u81EA\u539F\u59CB\u7B46\u8A18\uFF0C\u7531\u7CFB\u7D71\u81EA\u52D5\u4FDD\u7559\u4EE5\u7DAD\u8B77\u77E5\u8B58\u5716\u8B5C\u5B8C\u6574\u6027\u3002");
+    parts.push("");
+    if (missingLinks.length > 0) {
+      parts.push("**\u4FDD\u7559\u7684\u96D9\u5411\u9023\u7D50\uFF08Preserved Wikilinks\uFF09\uFF1A**");
+      for (const link of missingLinks) {
+        parts.push(`- [[${link}]]`);
+      }
+      parts.push("");
+    }
+    if (missingTags.length > 0) {
+      parts.push("**\u4FDD\u7559\u7684\u6A19\u7C64\uFF08Preserved Tags\uFF09\uFF1A**");
+      parts.push(missingTags.map((t) => `#${t}`).join(" "));
+      parts.push("");
+    }
+    return parts.join("\n");
+  }
+  // ========================================================================
+  // Change Checkpoint System
+  // ========================================================================
+  /**
+   * Save a full snapshot of the file content before destructive rewriting.
+   * Checkpoints are stored in `_checkpoints/<basename>/` with timestamped
+   * filenames so the user can diff or roll back at any time.
+   */
+  async saveCheckpoint(file, content) {
+    try {
+      const checkpointDir = (0, import_obsidian4.normalizePath)(`_checkpoints/${file.basename}`);
+      const existingDir = this.app.vault.getAbstractFileByPath(checkpointDir);
+      if (!existingDir) {
+        await this.app.vault.createFolder(checkpointDir);
+      }
+      const now = /* @__PURE__ */ new Date();
+      const ts = now.toISOString().replace(/[:.]/g, "-");
+      const checkpointPath = (0, import_obsidian4.normalizePath)(
+        `${checkpointDir}/${file.basename}_${ts}.md`
+      );
+      const header = [
+        "---",
+        "type: checkpoint",
+        `source: "[[${file.basename}]]"`,
+        `checkpoint_created: ${now.toISOString()}`,
+        `original_path: "${file.path}"`,
+        "---",
+        "",
+        "> [!warning] \u6B64\u70BA\u81EA\u52D5\u4FDD\u5B58\u7684\u8B8A\u66F4\u6AA2\u67E5\u9EDE\uFF08Checkpoint\uFF09",
+        `> \u539F\u59CB\u6A94\u6848\uFF1A[[${file.basename}]]`,
+        `> \u5FEB\u7167\u6642\u9593\uFF1A${now.toISOString()}`,
+        "",
+        "---",
+        ""
+      ].join("\n");
+      await this.app.vault.create(checkpointPath, header + content);
+      console.log(`[ArticleProcessorEngine] Checkpoint saved: ${checkpointPath}`);
+    } catch (err) {
+      console.warn("[ArticleProcessorEngine] Failed to save checkpoint:", err);
+    }
   }
 };
 
