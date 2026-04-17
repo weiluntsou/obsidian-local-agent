@@ -26,10 +26,14 @@ const PILLARS = [
   "99_未分類"
 ];
 
-const ARTICLE_PROCESSOR_PROMPT = `閱讀使用者提供的文章內容，並嚴格按照以下四個步驟處理，最終改寫為一個完整的 Markdown（標記語言）格式筆記。
+const ARTICLE_PROCESSOR_PROMPT = `閱讀使用者提供的文章內容（包含原始檔名），並嚴格按照以下五個步驟處理，最終改寫為一個完整的 Markdown（標記語言）格式筆記。
+
+## 步驟零：評估與修改標題（TITLE）
+判斷原始筆記檔名是否能精準概括內文。如果無關或是無意義名稱，請根據內容給出一個 20 字以內的新繁體中文標題。如果原始檔名包含日期資訊（如 2026-04-17），請務必將其保留於新標題中。若原標題已經完美貼切，請沿用。請將最後決定好的標題，放入下一步驟 YAML 區塊的 \`title:\` 欄位。
 
 ## 步驟一：建立標準化 YAML（YAML 資料序列化格式）前文
 請根據文章內容，提取中繼資料並生成 YAML 區塊。
+- title（標題）: {SUGGESTED_TITLE}
 - type（類型）: reference（參考資料）
 - source（來源）: {SOURCE_URL}
 - captured（擷取日期）: {CAPTURED_DATE}
@@ -56,6 +60,7 @@ const ARTICLE_PROCESSOR_PROMPT = `閱讀使用者提供的文章內容，並嚴�
 # 輸出範本（嚴格遵循此格式輸出，不要輸出任何其他多餘的對話文字）
 
 ---
+title: {SUGGESTED_TITLE}
 type: reference
 source: {SOURCE_URL}
 captured: {CAPTURED_DATE}
@@ -106,11 +111,13 @@ export class ArticleProcessorEngine {
           .replace(/\{CAPTURED_DATE\}/g, today)
           .replace(/\{SOURCE_URL\}/g, sourceUrl || "[填寫原文網址，若無則留空]");
 
+      const userPromptContext = `【原始標題】：${file.basename}\n\n【文章內文】：\n${content}`;
+
       new Notice(`正在處理文章「${file.basename}」...這可能需要一些時間。`);
 
       const rawResponse = await this.apiClient.prompt(
         systemPrompt,
-        content,
+        userPromptContext,
         this.temperature
       );
 
@@ -204,12 +211,19 @@ export class ArticleProcessorEngine {
       await this.app.vault.modify(file, originalFmFull + ontologyRestoredBody + imagesSection);
 
       // Now merge newly discovered properties safely using Obsidian API
+      let suggestedTitle = file.basename;
       await this.app.fileManager.processFrontMatter(file, (fm) => {
          // Preserve all original frontmatter keys that the LLM doesn't manage
          for (const [key, value] of Object.entries(ontology.preservedFrontmatter)) {
            if (!(key in fm)) {
              fm[key] = value;
            }
+         }
+
+         const titleMatch = llmFmString.match(/title:\s*(.+)/i);
+         if (titleMatch) {
+            suggestedTitle = titleMatch[1].replace(/["']/g, "").trim();
+            fm["title"] = suggestedTitle;
          }
 
          fm["type"] = "reference";
@@ -232,6 +246,16 @@ export class ArticleProcessorEngine {
 
       if (finalCategory) {
          await this.moveFileToCategory(file, finalCategory);
+      }
+
+      // Smart Renaming
+      const newBaseName = suggestedTitle.replace(/[\\/:"*?<>|#^\[\]]/g, "").trim().slice(0, 50);
+      if (newBaseName && newBaseName !== file.basename) {
+         const parentDirPath = file.parent?.path || "";
+         const newPath = normalizePath(`${parentDirPath}/${newBaseName}.md`);
+         if (!this.app.vault.getAbstractFileByPath(newPath)) {
+            await this.app.vault.rename(file, newPath);
+         }
       }
 
     } catch (err) {

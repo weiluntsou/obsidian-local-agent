@@ -336,13 +336,14 @@ var PILLARS2 = [
 ];
 var REFINER_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u5C08\u696D\u7684\u77E5\u8B58\u7CBE\u4FEE\u8207\u6458\u8981\u5F15\u64CE\u3002\u4F60\u7684\u8077\u8CAC\u662F\u8655\u7406\u539F\u59CB\u7B46\u8A18\u548C\u6587\u7AE0\uFF0C\u5F9E\u4E2D\u8403\u53D6\u6700\u9AD8\u54C1\u8CEA\u7684\u8CC7\u8A0A\u4FE1\u865F\u3002
 
-\u4F60\u5FC5\u9808\u8F38\u51FA\u6070\u597D\u4E00\u500B\u7D50\u69CB\u5316\u7684 JSON\uFF08JSON \u8CC7\u6599\u683C\u5F0F\uFF09\u7269\u4EF6\u3002\u8ACB\u4ED4\u7D30\u95B1\u8B80\u8F38\u5165\u7684\u7B46\u8A18\uFF0C\u4E26\u57F7\u884C\u4EE5\u4E0B\u56DB\u500B\u64CD\u4F5C\uFF1A
+\u4F60\u5FC5\u9808\u8F38\u51FA\u6070\u597D\u4E00\u500B\u7D50\u69CB\u5316\u7684 JSON\uFF08JSON \u8CC7\u6599\u683C\u5F0F\uFF09\u7269\u4EF6\u3002\u8ACB\u4ED4\u7D30\u95B1\u8B80\u8F38\u5165\u7684\u7B46\u8A18\uFF08\u5305\u542B\u6A94\u540D\u4F5C\u70BA\u53C3\u8003\uFF09\uFF0C\u4E26\u57F7\u884C\u4EE5\u4E0B\u516D\u500B\u64CD\u4F5C\uFF1A
 
-1. \u6458\u8981\uFF08SUMMARY\uFF09\uFF1A\u63D0\u4F9B\u5C0D\u6838\u5FC3\u6982\u5FF5\u7684\u7C21\u6F54\u6458\u8981\u3002
-2. \u95DC\u9375\u8A5E\u5F59\uFF08KEYWORDS\uFF09\uFF1A\u63D0\u53D6\u6280\u8853\u7528\u8A9E\uFF08technical terms\uFF09\uFF0C\u4E26\u63D0\u4F9B\u82F1\u6587\u81F3\u7E41\u9AD4\u4E2D\u6587\u7684\u8A5E\u5F59\u5C0D\u7167\u8868\u3002\u5982\u679C\u539F\u59CB\u6587\u672C\u5DF2\u70BA\u4E2D\u6587\uFF0C\u53EF\u7565\u904E\u6B64\u6B65\u6216\u63D0\u4F9B\u4E2D\u6587\u6982\u5FF5\u7684\u82F1\u6587\u8B6F\u8A5E\u3002
-3. \u91CD\u9EDE\u63D0\u53D6\uFF08HIGHLIGHTS\uFF09\uFF1A\u8B39\u6311\u9078\u9AD8\u50F9\u503C\u3001\u6709\u5BE6\u7528\u6027\u7684\u6BB5\u843D\u6216\u53E5\u5B50\u3002\u91CD\u65B0\u6E05\u6670\u5730\u6539\u5BEB\uFF0C\u53BB\u9664\u6240\u6709\u6A23\u677F\u6587\u672C\u3001\u5197\u9918\u5167\u5BB9\u548C\u4E0D\u5FC5\u8981\u7684\u80CC\u666F\u8AAA\u660E\u3002
-4. \u539F\u5B50\u5316\u6982\u5FF5\uFF08ATOMIZATION\uFF09\uFF1A\u5982\u679C\u6587\u7AE0\u4E2D\u5305\u542B\u4E0D\u540C\u7684\u3001\u9AD8\u50F9\u503C\u7684\u6280\u5DE7\u3001\u6982\u5FF5\u6216\u601D\u7DAD\u6A21\u578B\uFF08\u4F8B\u5982\uFF1A\u7279\u5B9A\u7684\u300C\u57F7\u884C\u7DD2\u7BA1\u7406\uFF08Thread Management\uFF09\u300D\u6280\u5DE7\uFF09\uFF0C\u8ACB\u5C07\u5176\u8403\u53D6\u70BA\u7368\u7ACB\u7684\u539F\u5B50\u5316\u7B46\u8A18\u3002
-5. \u5206\u985E\uFF08CLASSIFICATION\uFF09\uFF1A\u5C07\u5167\u5BB9\u5206\u985E\u5230\u4E94\u5927\u652F\u67F1\uFF08Five Pillars\uFF09\u4E2D\u7684\u6070\u597D\u4E00\u500B\u3002
+1. \u6A19\u984C\u512A\u5316\uFF08TITLE\uFF09\uFF1A\u8A55\u4F30\u539F\u59CB\u6A19\u984C\u662F\u5426\u8207\u5167\u5BB9\u9AD8\u5EA6\u76F8\u95DC\u3002\u5982\u679C\u7121\u95DC\u6216\u662F\u7121\u610F\u7FA9\u540D\u7A31\uFF0C\u8ACB\u6839\u64DA\u5167\u5BB9\u7D66\u51FA\u4E00\u500B20\u5B57\u4EE5\u5167\u7684\u65B0\u7E41\u9AD4\u4E2D\u6587\u6A19\u984C\u3002\u5982\u679C\u539F\u59CB\u6A19\u984C\u5305\u542B\u65E5\u671F\u8CC7\u8A0A\uFF08\u5982 2026-04-17\uFF09\uFF0C\u5FC5\u9808\u4FDD\u7559\u65BC\u65B0\u6A19\u984C\u4E2D\u3002\u82E5\u539F\u6A19\u984C\u5DF2\u7D93\u8CBC\u5207\u8CBC\u65BC\u5167\u5BB9\uFF0C\u8ACB\u76F4\u63A5\u56DE\u50B3\u539F\u6A19\u984C\u3002
+2. \u6458\u8981\uFF08SUMMARY\uFF09\uFF1A\u63D0\u4F9B\u5C0D\u6838\u5FC3\u6982\u5FF5\u7684\u7C21\u6F54\u6458\u8981\u3002
+3. \u95DC\u9375\u8A5E\u5F59\uFF08KEYWORDS\uFF09\uFF1A\u63D0\u53D6\u6280\u8853\u7528\u8A9E\uFF08technical terms\uFF09\uFF0C\u4E26\u63D0\u4F9B\u82F1\u6587\u81F3\u7E41\u9AD4\u4E2D\u6587\u7684\u8A5E\u5F59\u5C0D\u7167\u8868\u3002\u5982\u679C\u539F\u59CB\u6587\u672C\u5DF2\u70BA\u4E2D\u6587\uFF0C\u53EF\u7565\u904E\u6B64\u6B65\u6216\u63D0\u4F9B\u4E2D\u6587\u6982\u5FF5\u7684\u82F1\u6587\u8B6F\u8A5E\u3002
+4. \u91CD\u9EDE\u63D0\u53D6\uFF08HIGHLIGHTS\uFF09\uFF1A\u8B39\u6311\u9078\u9AD8\u50F9\u503C\u3001\u6709\u5BE6\u7528\u6027\u7684\u6BB5\u843D\u6216\u53E5\u5B50\u3002\u91CD\u65B0\u6E05\u6670\u5730\u6539\u5BEB\uFF0C\u53BB\u9664\u6240\u6709\u6A23\u677F\u6587\u672C\u3001\u5197\u9918\u5167\u5BB9\u548C\u4E0D\u5FC5\u8981\u7684\u80CC\u666F\u8AAA\u660E\u3002
+5. \u539F\u5B50\u5316\u6982\u5FF5\uFF08ATOMIZATION\uFF09\uFF1A\u5982\u679C\u6587\u7AE0\u4E2D\u5305\u542B\u4E0D\u540C\u7684\u3001\u9AD8\u50F9\u503C\u7684\u6280\u5DE7\u3001\u6982\u5FF5\u6216\u601D\u7DAD\u6A21\u578B\uFF08\u4F8B\u5982\uFF1A\u7279\u5B9A\u7684\u300C\u57F7\u884C\u7DD2\u7BA1\u7406\uFF08Thread Management\uFF09\u300D\u6280\u5DE7\uFF09\uFF0C\u8ACB\u5C07\u5176\u8403\u53D6\u70BA\u7368\u7ACB\u7684\u539F\u5B50\u5316\u7B46\u8A18\u3002
+6. \u5206\u985E\uFF08CLASSIFICATION\uFF09\uFF1A\u5C07\u5167\u5BB9\u5206\u985E\u5230\u4E94\u5927\u652F\u67F1\uFF08Five Pillars\uFF09\u4E2D\u7684\u6070\u597D\u4E00\u500B\u3002
 
 \u4E94\u5927\u652F\u67F1\uFF1A
 - 10_\u5DE5\u4F5C\u8207\u7BA1\u7406
@@ -353,6 +354,7 @@ var REFINER_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u5C08\u696D\u7684\u77E5\u8
 
 \u9810\u671F\u7684 JSON \u7D50\u69CB\uFF1A
 {
+  "suggestedTitle": "\u65B0\u7684\u6216\u539F\u4F86\u7684\u6A19\u984C",
   "summary": "\u7C21\u6F54\u6458\u8981...",
   "keywords": [
     { "en": "English Term", "zh": "\u7E41\u9AD4\u4E2D\u6587\u7FFB\u8B6F" }
@@ -387,7 +389,7 @@ var NoteRefinerEngine = class {
     this.temperature = temperature;
   }
   async refineFile(file) {
-    var _a;
+    var _a, _b;
     try {
       const originalContent = await this.app.vault.read(file);
       const bodyContent = this.stripFrontmatter(originalContent);
@@ -398,9 +400,13 @@ var NoteRefinerEngine = class {
       const ontology = this.captureOntology(originalContent);
       await this.saveCheckpoint(file, originalContent);
       new import_obsidian3.Notice(`\u6B63\u5728\u7CBE\u4FEE\u300C${file.basename}\u300D...\u9019\u53EF\u80FD\u9700\u8981\u4E00\u4E9B\u6642\u9593\u3002`);
+      const userPromptContext = `\u3010\u539F\u59CB\u6A19\u984C\u3011\uFF1A${file.basename}
+
+\u3010\u7B46\u8A18\u5167\u6587\u3011\uFF1A
+${bodyContent}`;
       const rawResponse = await this.apiClient.prompt(
         REFINER_SYSTEM_PROMPT,
-        bodyContent,
+        userPromptContext,
         this.temperature
       );
       const parsed = parseJsonFromLLM(rawResponse);
@@ -452,11 +458,21 @@ var NoteRefinerEngine = class {
       const frontmatterStr = frontmatterMatch ? frontmatterMatch[0] : "";
       const newFullContent = frontmatterStr + ontologyRestoredBody;
       await this.app.vault.modify(file, newFullContent);
+      const newBaseName = parsed.suggestedTitle ? this.sanitizeFileName(parsed.suggestedTitle).slice(0, 50) : file.basename;
+      let finalName = file.basename;
+      if (newBaseName && newBaseName !== file.basename) {
+        const parentDirPath = ((_b = file.parent) == null ? void 0 : _b.path) || "";
+        const newPath = (0, import_obsidian3.normalizePath)(`${parentDirPath}/${newBaseName}.md`);
+        if (!this.app.vault.getAbstractFileByPath(newPath)) {
+          await this.app.vault.rename(file, newPath);
+          finalName = newBaseName;
+        }
+      }
       if (shouldMove) {
         await this.moveFileToCategory(file, finalCategory);
-        new import_obsidian3.Notice(`\u7CBE\u4FEE\u5B8C\u6210\u4E26\u5DF2\u79FB\u52D5\u5230 ${finalCategory}`);
+        new import_obsidian3.Notice(`\u7CBE\u4FEE\u5B8C\u6210\u4E26\u5DF2\u91CD\u65B0\u547D\u540D\u70BA\u300C${finalName}\u300D\uFF0C\u79FB\u52D5\u5230 ${finalCategory}`);
       } else {
-        new import_obsidian3.Notice(`\u7CBE\u4FEE\u5B8C\u6210\u3002`);
+        new import_obsidian3.Notice(`\u7CBE\u4FEE\u5B8C\u6210\uFF08${finalName}\uFF09\u3002`);
       }
     } catch (err) {
       console.error("[NoteRefinerEngine] Error processing file:", err);
@@ -710,10 +726,14 @@ var PILLARS3 = [
   "40_\u81EA\u8A17\u7BA1\u5BE6\u9A57\u5BA4",
   "99_\u672A\u5206\u985E"
 ];
-var ARTICLE_PROCESSOR_PROMPT = `\u95B1\u8B80\u4F7F\u7528\u8005\u63D0\u4F9B\u7684\u6587\u7AE0\u5167\u5BB9\uFF0C\u4E26\u56B4\u683C\u6309\u7167\u4EE5\u4E0B\u56DB\u500B\u6B65\u9A5F\u8655\u7406\uFF0C\u6700\u7D42\u6539\u5BEB\u70BA\u4E00\u500B\u5B8C\u6574\u7684 Markdown\uFF08\u6A19\u8A18\u8A9E\u8A00\uFF09\u683C\u5F0F\u7B46\u8A18\u3002
+var ARTICLE_PROCESSOR_PROMPT = `\u95B1\u8B80\u4F7F\u7528\u8005\u63D0\u4F9B\u7684\u6587\u7AE0\u5167\u5BB9\uFF08\u5305\u542B\u539F\u59CB\u6A94\u540D\uFF09\uFF0C\u4E26\u56B4\u683C\u6309\u7167\u4EE5\u4E0B\u4E94\u500B\u6B65\u9A5F\u8655\u7406\uFF0C\u6700\u7D42\u6539\u5BEB\u70BA\u4E00\u500B\u5B8C\u6574\u7684 Markdown\uFF08\u6A19\u8A18\u8A9E\u8A00\uFF09\u683C\u5F0F\u7B46\u8A18\u3002
+
+## \u6B65\u9A5F\u96F6\uFF1A\u8A55\u4F30\u8207\u4FEE\u6539\u6A19\u984C\uFF08TITLE\uFF09
+\u5224\u65B7\u539F\u59CB\u7B46\u8A18\u6A94\u540D\u662F\u5426\u80FD\u7CBE\u6E96\u6982\u62EC\u5167\u6587\u3002\u5982\u679C\u7121\u95DC\u6216\u662F\u7121\u610F\u7FA9\u540D\u7A31\uFF0C\u8ACB\u6839\u64DA\u5167\u5BB9\u7D66\u51FA\u4E00\u500B 20 \u5B57\u4EE5\u5167\u7684\u65B0\u7E41\u9AD4\u4E2D\u6587\u6A19\u984C\u3002\u5982\u679C\u539F\u59CB\u6A94\u540D\u5305\u542B\u65E5\u671F\u8CC7\u8A0A\uFF08\u5982 2026-04-17\uFF09\uFF0C\u8ACB\u52D9\u5FC5\u5C07\u5176\u4FDD\u7559\u65BC\u65B0\u6A19\u984C\u4E2D\u3002\u82E5\u539F\u6A19\u984C\u5DF2\u7D93\u5B8C\u7F8E\u8CBC\u5207\uFF0C\u8ACB\u6CBF\u7528\u3002\u8ACB\u5C07\u6700\u5F8C\u6C7A\u5B9A\u597D\u7684\u6A19\u984C\uFF0C\u653E\u5165\u4E0B\u4E00\u6B65\u9A5F YAML \u5340\u584A\u7684 \`title:\` \u6B04\u4F4D\u3002
 
 ## \u6B65\u9A5F\u4E00\uFF1A\u5EFA\u7ACB\u6A19\u6E96\u5316 YAML\uFF08YAML \u8CC7\u6599\u5E8F\u5217\u5316\u683C\u5F0F\uFF09\u524D\u6587
 \u8ACB\u6839\u64DA\u6587\u7AE0\u5167\u5BB9\uFF0C\u63D0\u53D6\u4E2D\u7E7C\u8CC7\u6599\u4E26\u751F\u6210 YAML \u5340\u584A\u3002
+- title\uFF08\u6A19\u984C\uFF09: {SUGGESTED_TITLE}
 - type\uFF08\u985E\u578B\uFF09: reference\uFF08\u53C3\u8003\u8CC7\u6599\uFF09
 - source\uFF08\u4F86\u6E90\uFF09: {SOURCE_URL}
 - captured\uFF08\u64F7\u53D6\u65E5\u671F\uFF09: {CAPTURED_DATE}
@@ -740,6 +760,7 @@ var ARTICLE_PROCESSOR_PROMPT = `\u95B1\u8B80\u4F7F\u7528\u8005\u63D0\u4F9B\u7684
 # \u8F38\u51FA\u7BC4\u672C\uFF08\u56B4\u683C\u9075\u5FAA\u6B64\u683C\u5F0F\u8F38\u51FA\uFF0C\u4E0D\u8981\u8F38\u51FA\u4EFB\u4F55\u5176\u4ED6\u591A\u9918\u7684\u5C0D\u8A71\u6587\u5B57\uFF09
 
 ---
+title: {SUGGESTED_TITLE}
 type: reference
 source: {SOURCE_URL}
 captured: {CAPTURED_DATE}
@@ -769,6 +790,7 @@ var ArticleProcessorEngine = class {
     this.temperature = temperature;
   }
   async processFile(file) {
+    var _a;
     try {
       const content = await this.app.vault.read(file);
       const urlMatch = content.match(/URL:\s*(https?:\/\/[^\s]+)/i) || content.match(/Source:\s*(https?:\/\/[^\s]+)/i);
@@ -777,10 +799,14 @@ var ArticleProcessorEngine = class {
       const ontology = this.captureOntology(content);
       await this.saveCheckpoint(file, content);
       const systemPrompt = ARTICLE_PROCESSOR_PROMPT.replace(/\{CAPTURED_DATE\}/g, today).replace(/\{SOURCE_URL\}/g, sourceUrl || "[\u586B\u5BEB\u539F\u6587\u7DB2\u5740\uFF0C\u82E5\u7121\u5247\u7559\u7A7A]");
+      const userPromptContext = `\u3010\u539F\u59CB\u6A19\u984C\u3011\uFF1A${file.basename}
+
+\u3010\u6587\u7AE0\u5167\u6587\u3011\uFF1A
+${content}`;
       new import_obsidian4.Notice(`\u6B63\u5728\u8655\u7406\u6587\u7AE0\u300C${file.basename}\u300D...\u9019\u53EF\u80FD\u9700\u8981\u4E00\u4E9B\u6642\u9593\u3002`);
       const rawResponse = await this.apiClient.prompt(
         systemPrompt,
-        content,
+        userPromptContext,
         this.temperature
       );
       let finalMarkdown = rawResponse.trim();
@@ -846,11 +872,17 @@ var ArticleProcessorEngine = class {
         imagesSection = "\n\n## \u539F\u59CB\u9644\u5716\uFF08\u4FDD\u7559\u7684\u5716\u50CF\uFF09\n" + uniqueImages.join("\n\n") + "\n";
       }
       await this.app.vault.modify(file, originalFmFull + ontologyRestoredBody + imagesSection);
+      let suggestedTitle = file.basename;
       await this.app.fileManager.processFrontMatter(file, (fm) => {
         for (const [key, value] of Object.entries(ontology.preservedFrontmatter)) {
           if (!(key in fm)) {
             fm[key] = value;
           }
+        }
+        const titleMatch = llmFmString.match(/title:\s*(.+)/i);
+        if (titleMatch) {
+          suggestedTitle = titleMatch[1].replace(/["']/g, "").trim();
+          fm["title"] = suggestedTitle;
         }
         fm["type"] = "reference";
         fm["captured"] = today;
@@ -866,6 +898,14 @@ var ArticleProcessorEngine = class {
       });
       if (finalCategory) {
         await this.moveFileToCategory(file, finalCategory);
+      }
+      const newBaseName = suggestedTitle.replace(/[\\/:"*?<>|#^\[\]]/g, "").trim().slice(0, 50);
+      if (newBaseName && newBaseName !== file.basename) {
+        const parentDirPath = ((_a = file.parent) == null ? void 0 : _a.path) || "";
+        const newPath = (0, import_obsidian4.normalizePath)(`${parentDirPath}/${newBaseName}.md`);
+        if (!this.app.vault.getAbstractFileByPath(newPath)) {
+          await this.app.vault.rename(file, newPath);
+        }
       }
     } catch (err) {
       console.error("[ArticleProcessorEngine] Error processing file:", err);

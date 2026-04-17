@@ -28,13 +28,14 @@ const PILLARS = [
 
 const REFINER_SYSTEM_PROMPT = `你是一位專業的知識精修與摘要引擎。你的職責是處理原始筆記和文章，從中萃取最高品質的資訊信號。
 
-你必須輸出恰好一個結構化的 JSON（JSON 資料格式）物件。請仔細閱讀輸入的筆記，並執行以下四個操作：
+你必須輸出恰好一個結構化的 JSON（JSON 資料格式）物件。請仔細閱讀輸入的筆記（包含檔名作為參考），並執行以下六個操作：
 
-1. 摘要（SUMMARY）：提供對核心概念的簡潔摘要。
-2. 關鍵詞彙（KEYWORDS）：提取技術用語（technical terms），並提供英文至繁體中文的詞彙對照表。如果原始文本已為中文，可略過此步或提供中文概念的英文譯詞。
-3. 重點提取（HIGHLIGHTS）：謹挑選高價值、有實用性的段落或句子。重新清晰地改寫，去除所有樣板文本、冗餘內容和不必要的背景說明。
-4. 原子化概念（ATOMIZATION）：如果文章中包含不同的、高價值的技巧、概念或思維模型（例如：特定的「執行緒管理（Thread Management）」技巧），請將其萃取為獨立的原子化筆記。
-5. 分類（CLASSIFICATION）：將內容分類到五大支柱（Five Pillars）中的恰好一個。
+1. 標題優化（TITLE）：評估原始標題是否與內容高度相關。如果無關或是無意義名稱，請根據內容給出一個20字以內的新繁體中文標題。如果原始標題包含日期資訊（如 2026-04-17），必須保留於新標題中。若原標題已經貼切貼於內容，請直接回傳原標題。
+2. 摘要（SUMMARY）：提供對核心概念的簡潔摘要。
+3. 關鍵詞彙（KEYWORDS）：提取技術用語（technical terms），並提供英文至繁體中文的詞彙對照表。如果原始文本已為中文，可略過此步或提供中文概念的英文譯詞。
+4. 重點提取（HIGHLIGHTS）：謹挑選高價值、有實用性的段落或句子。重新清晰地改寫，去除所有樣板文本、冗餘內容和不必要的背景說明。
+5. 原子化概念（ATOMIZATION）：如果文章中包含不同的、高價值的技巧、概念或思維模型（例如：特定的「執行緒管理（Thread Management）」技巧），請將其萃取為獨立的原子化筆記。
+6. 分類（CLASSIFICATION）：將內容分類到五大支柱（Five Pillars）中的恰好一個。
 
 五大支柱：
 - 10_工作與管理
@@ -45,6 +46,7 @@ const REFINER_SYSTEM_PROMPT = `你是一位專業的知識精修與摘要引擎�
 
 預期的 JSON 結構：
 {
+  "suggestedTitle": "新的或原來的標題",
   "summary": "簡潔摘要...",
   "keywords": [
     { "en": "English Term", "zh": "繁體中文翻譯" }
@@ -74,6 +76,7 @@ const REFINER_SYSTEM_PROMPT = `你是一位專業的知識精修與摘要引擎�
 6. 不可包含 Markdown 代碼區塊（markdown fences）、代碼片段或 JSON 物件外的任何文字。必須為有效的 JSON（valid JSON）。`;
 
 interface RefinerResult {
+  suggestedTitle: string;
   summary: string;
   keywords: { en: string; zh: string }[];
   highlights: string[];
@@ -108,9 +111,11 @@ export class NoteRefinerEngine {
 
       new Notice(`正在精修「${file.basename}」...這可能需要一些時間。`);
 
+      const userPromptContext = `【原始標題】：${file.basename}\n\n【筆記內文】：\n${bodyContent}`;
+
       const rawResponse = await this.apiClient.prompt(
         REFINER_SYSTEM_PROMPT,
-        bodyContent,
+        userPromptContext,
         this.temperature
       );
 
@@ -184,12 +189,28 @@ export class NoteRefinerEngine {
       const newFullContent = frontmatterStr + ontologyRestoredBody;
       await this.app.vault.modify(file, newFullContent);
 
+      // --- Smart Renaming (if suggestedTitle is valid and differs from existing)
+      const newBaseName = parsed.suggestedTitle 
+        ? this.sanitizeFileName(parsed.suggestedTitle).slice(0, 50) 
+        : file.basename;
+      
+      let finalName = file.basename;
+      if (newBaseName && newBaseName !== file.basename) {
+         // Attempt to rename the file. Ensure no collisions.
+         const parentDirPath = file.parent?.path || "";
+         const newPath = normalizePath(`${parentDirPath}/${newBaseName}.md`);
+         if (!this.app.vault.getAbstractFileByPath(newPath)) {
+            await this.app.vault.rename(file, newPath);
+            finalName = newBaseName;
+         }
+      }
+
       // 4. Move file if needed
       if (shouldMove) {
         await this.moveFileToCategory(file, finalCategory);
-        new Notice(`精修完成並已移動到 ${finalCategory}`);
+        new Notice(`精修完成並已重新命名為「${finalName}」，移動到 ${finalCategory}`);
       } else {
-        new Notice(`精修完成。`);
+        new Notice(`精修完成（${finalName}）。`);
       }
 
     } catch (err) {
