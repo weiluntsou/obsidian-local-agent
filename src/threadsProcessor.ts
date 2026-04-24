@@ -6,8 +6,9 @@
  *   1. Title Generation — reads content and produces a ≤20-char title.
  *   2. Summary Append   — for posts with body text >100 chars, appends
  *                          a concise summary section.
- *   3. Relation Linking  — suggests existing Obsidian vault pages that
- *                          could be linked via [[wikilinks]].
+ *   3. Relation Linking  — aggressively links to existing vault pages
+ *                          AND creates new thematic hub pages when no
+ *                          suitable match exists, to eliminate orphans.
  *
  * Design: lightweight, non-destructive (uses checkpoint system), and
  * follows the same patterns as ArticleProcessorEngine.
@@ -23,40 +24,111 @@ import { LocalLLMClient, parseJsonFromLLM } from "./api";
 /**
  * Single-shot prompt that handles all three tasks at once to minimise
  * LLM round-trips (Threads posts are short, so context fits easily).
+ *
+ * Key design decisions for stronger relation linking:
+ *   - Page list is grouped by folder (category) so the LLM has context.
+ *   - The prompt demands at least 1 relation — never empty.
+ *   - If no existing page fits, LLM must suggest a NEW hub topic to create.
+ *   - Fuzzy/thematic matching is encouraged (e.g. a food post should
+ *     link to a food-related page even if the exact restaurant differs).
  */
-const THREADS_PROCESSOR_PROMPT = `你是一位精準的內容分析助手，專門處理社群媒體短文（來自 Threads / Instagram）。
+const THREADS_PROCESSOR_PROMPT = `你是一位精準的 Obsidian 知識管理助手，專門處理社群媒體短文（來自 Threads / Instagram）。
 
-你將收到一篇帖文的「原始檔名」和「內文」，以及使用者 Obsidian 知識庫中「現有頁面清單」。
+你將收到：
+1. 一篇帖文的「原始檔名」與「內文」
+2. 使用者 Obsidian 知識庫中「現有頁面清單」（按資料夾分組）
 
-請嚴格依照以下 JSON 格式回傳，不要輸出任何其他文字：
+---
+
+你必須回傳以下 JSON，不得輸出其他任何文字。
 
 {
-  "title": "（根據內文下一個精準的繁體中文標題，最多 20 個字。若原始檔名中有日期如 2025-06-17，請將日期保留在標題前面，格式為 YYYY-MM-DD 加空格再接標題，日期不計入 20 字上限）",
-  "summary": "（若內文超過 100 字，請寫一段 50 字以內的摘要，捕捉核心主題或觀點；若不超過 100 字則回傳空字串 \"\"）",
-  "relations": ["頁面名稱A", "頁面名稱B"]
+  "title": "新標題",
+  "summary": "摘要文字，或空字串",
+  "existing_relations": ["已存在的頁面名稱A", "頁面名稱B"],
+  "new_hubs": [
+    {
+      "name": "新主題頁名稱",
+      "description": "2~3句話描述這個主題頁的涵蓋範圍，讓未來的筆記也能連結過來",
+      "category": "30_生活與創作"
+    }
+  ]
 }
 
-## 關於 relations 的規則
-- 從「現有頁面清單」中挑選 1 到 3 個與內文主題最相關的頁面。
-- 只能從提供的清單中選擇，不可自創頁面名稱。
-- 若沒有任何相關頁面，回傳空陣列 []。
-- 回傳的是頁面名稱（不含路徑前綴），例如 "旺卡" 而非 "30_Life_&_Creations/旺卡"。
+---
 
-## 關於 title 的規則
-- 標題必須是繁體中文。
-- 標題應精準概括文章的核心內容或主題。
-- 不要使用引號包覆標題文字本身。
-- 若檔名中含有日期，標題格式範例："2025-06-17 草屯碳桔燒肉便當初體驗"
+## title 規則
+- 繁體中文，最多 20 字（日期不計入字數）
+- 若原始檔名有日期（如 2025-06-17），保留日期前綴
+- 格式："2025-06-17 草屯碳桔燒肉便當初體驗"
 
-## 關於 summary 的規則
-- 摘要應當是一段精煉的陳述句，不是條列式。
-- 若內文包含食記、影評、書評等，摘要應點出評價或結論。`;
+## summary 規則
+- 若內文（不含 frontmatter）超過 100 字 → 撰寫 50 字以內的精煉摘要
+- 若不超過 100 字 → 回傳空字串 ""
+- 食記點出評價、影評點出結論、技術文點出核心觀點
+
+## existing_relations 規則（最重要！）
+- 從「現有頁面清單」中挑選 **1 到 5 個**與內文主題相關的頁面
+- **請用「主題關聯性」判斷**，而非逐字比對。例如：
+  - 影評 → 連結到「觀影心得」、其他相同導演/演員的影評筆記
+  - 食記 → 連結到「阿琴麻辣風味」（同為食記）、「草屯美食」等
+  - 書評 → 連結到「讀書心得」、同主題的筆記
+  - 技術文 → 連結到同領域的技術筆記
+  - 生活感想 → 連結到「心理學與個人成長」相關筆記
+  - 日文學習 → 連結到相關學習筆記
+- **回傳的是頁面的 basename**（不含路徑），例如 "觀影心得" 而非 "30_Life_&_Creations/觀影心得"
+- **盡量找到至少 1 個**，只有在清單中完全沒有任何沾得上邊的頁面時才允許空陣列
+
+## new_hubs 規則（減少孤立筆記的關鍵！）
+- 當 existing_relations 找到的頁面不足 2 個時，**必須建議 1 個新的主題頁**
+- 新主題頁的名稱應該是一個「可以收集同類未來筆記」的通用主題，例如：
+  - 一篇草屯食記 → 建議「草屯美食地圖」
+  - 一篇影評 → 若「觀影心得」已存在就不用再建，改連結過去
+  - 一篇 AI 工具使用心得 → 建議「AI 工具實戰筆記」
+  - 一篇育兒日常 → 建議「親子生活記錄」
+  - 一篇旅遊 → 建議「旅行見聞」
+- name: 繁體中文，簡潔明確（6~12 字）
+- description: 2~3 句話描述涵蓋範圍
+- category: 必須是以下五個之一：
+  - "10_工作與管理"
+  - "20_學術與電腦科學"
+  - "30_生活與創作"
+  - "40_自託管實驗室"
+  - "99_未分類"
+- 若 existing_relations 已有 2 個以上的良好匹配，new_hubs 可以是空陣列 []
+- **重複檢查**：若清單中已有功能相同的頁面（如已有「觀影心得」就不再建「電影心得」），不要建立重複主題`;
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface LLMResponse {
+  title?: string;
+  summary?: string;
+  existing_relations?: string[];
+  new_hubs?: Array<{
+    name: string;
+    description: string;
+    category: string;
+  }>;
+}
+
+const VALID_CATEGORIES = [
+  "10_工作與管理",
+  "20_學術與電腦科學",
+  "30_生活與創作",
+  "40_自託管實驗室",
+  "99_未分類",
+];
 
 // ---------------------------------------------------------------------------
 // Engine
 // ---------------------------------------------------------------------------
 
 export class ThreadsProcessorEngine {
+  /** Cache of hub pages created during this batch to avoid duplicates. */
+  private createdHubsThisBatch: Set<string> = new Set();
+
   constructor(
     private app: App,
     private apiClient: LocalLLMClient,
@@ -72,6 +144,9 @@ export class ThreadsProcessorEngine {
     onProgress?: (current: number, total: number, name: string) => void,
     shouldCancel?: () => boolean
   ): Promise<number> {
+    // Reset hub creation cache for this batch
+    this.createdHubsThisBatch.clear();
+
     // ── Collect all markdown files ──
     const files = this.getMarkdownFiles(folderPath);
     if (files.length === 0) {
@@ -81,8 +156,8 @@ export class ThreadsProcessorEngine {
 
     new Notice(`找到 ${files.length} 篇 Threads 帖文，開始批次處理...`);
 
-    // ── Build the vault page index (basename only) for relation matching ──
-    const existingPages = this.collectVaultPageNames(folderPath);
+    // ── Build the vault page index grouped by folder ──
+    const { grouped, allBasenames } = this.collectVaultPages(folderPath);
 
     let processedCount = 0;
 
@@ -105,7 +180,7 @@ export class ThreadsProcessorEngine {
           continue;
         }
 
-        await this.processFile(file, content, existingPages);
+        await this.processFile(file, content, grouped, allBasenames);
         processedCount++;
       } catch (err) {
         console.error(
@@ -113,6 +188,12 @@ export class ThreadsProcessorEngine {
           err
         );
       }
+    }
+
+    if (this.createdHubsThisBatch.size > 0) {
+      new Notice(
+        `本次共建立 ${this.createdHubsThisBatch.size} 個新主題頁：${Array.from(this.createdHubsThisBatch).join("、")}`
+      );
     }
 
     return processedCount;
@@ -123,7 +204,8 @@ export class ThreadsProcessorEngine {
   private async processFile(
     file: TFile,
     content: string,
-    existingPages: string[]
+    groupedPages: string,
+    allBasenames: Set<string>
   ): Promise<void> {
     const body = this.stripFrontmatter(content);
 
@@ -139,17 +221,14 @@ export class ThreadsProcessorEngine {
     await this.saveCheckpoint(file, content);
 
     // ── Build user prompt ──
-    // Truncate page list to avoid overwhelming context (send ≤200 page names)
-    const pageListStr = existingPages.slice(0, 200).join("\n");
-
     const userPrompt = [
       `【原始檔名】：${file.basename}`,
       "",
       `【內文】：`,
       body,
       "",
-      `【現有頁面清單】（共 ${existingPages.length} 頁，以下列出前 200 個）：`,
-      pageListStr,
+      `【現有頁面清單（按資料夾分組）】：`,
+      groupedPages,
     ].join("\n");
 
     // ── Call LLM ──
@@ -159,50 +238,89 @@ export class ThreadsProcessorEngine {
       this.temperature
     );
 
-    const parsed = parseJsonFromLLM<{
-      title?: string;
-      summary?: string;
-      relations?: string[];
-    }>(rawResponse);
+    const parsed = parseJsonFromLLM<LLMResponse>(rawResponse);
 
     if (!parsed) {
       console.warn(
         `[ThreadsProcessor] Failed to parse LLM response for ${file.basename}. Raw:`,
-        rawResponse.substring(0, 300)
+        rawResponse.substring(0, 500)
       );
       return;
     }
 
-    const { title, summary, relations } = parsed;
+    const { title, summary, existing_relations, new_hubs } = parsed;
 
     // ── Apply changes ──
 
     // 1. Mark as processed & update frontmatter via Obsidian API
     await this.app.fileManager.processFrontMatter(file, (fm) => {
       fm["threads-processed"] = true;
-
       if (title) {
         fm["title"] = title;
       }
     });
 
-    // 2. Append summary & relations section to body
+    // 2. Build append section
     let appendSection = "";
 
     if (summary && summary.trim().length > 0) {
       appendSection += `\n\n---\n\n## 摘要\n\n${summary.trim()}\n`;
     }
 
-    if (relations && relations.length > 0) {
-      // Filter to only pages that truly exist in the provided list
-      const validRelations = relations.filter((r) =>
-        existingPages.includes(r)
-      );
-      if (validRelations.length > 0) {
-        appendSection += `\n## 關聯筆記\n\n`;
-        for (const rel of validRelations) {
-          appendSection += `- [[${rel}]]\n`;
+    // 3. Resolve existing relations with fuzzy matching
+    const resolvedExisting = this.resolveRelations(
+      existing_relations || [],
+      allBasenames
+    );
+
+    // 4. Create new hub pages if suggested & collect their names
+    const hubNames: string[] = [];
+    if (new_hubs && new_hubs.length > 0) {
+      for (const hub of new_hubs) {
+        if (!hub.name || !hub.description) continue;
+
+        const safeName = hub.name
+          .replace(/[\\/:\"*?<>|#^\[\]]/g, "")
+          .trim();
+        if (!safeName) continue;
+
+        // Skip if a page with this basename already exists or was created this batch
+        if (
+          allBasenames.has(safeName) ||
+          this.createdHubsThisBatch.has(safeName)
+        ) {
+          // Still add it to relations even if we didn't create it
+          hubNames.push(safeName);
+          continue;
         }
+
+        // Create the hub page
+        try {
+          await this.createHubPage(safeName, hub.description, hub.category);
+          this.createdHubsThisBatch.add(safeName);
+          allBasenames.add(safeName);
+          hubNames.push(safeName);
+          console.log(
+            `[ThreadsProcessor] Created hub page: ${safeName}`
+          );
+        } catch (err) {
+          console.warn(
+            `[ThreadsProcessor] Failed to create hub page ${safeName}:`,
+            err
+          );
+        }
+      }
+    }
+
+    // 5. Merge all relations (existing + newly created hubs)
+    const allRelations = Array.from(
+      new Set([...resolvedExisting, ...hubNames])
+    );
+
+    if (allRelations.length > 0) {
+      appendSection += `\n## 關聯筆記\n\n`;
+      for (const rel of allRelations) {
+        appendSection += `- [[${rel}]]\n`;
       }
     }
 
@@ -211,7 +329,7 @@ export class ThreadsProcessorEngine {
       await this.app.vault.modify(file, currentContent + appendSection);
     }
 
-    // 3. Rename the file if a new title is suggested and different
+    // 6. Rename the file if a new title is suggested and different
     if (title) {
       const safeName = title
         .replace(/[\\/:\"*?<>|#^\[\]]/g, "")
@@ -225,43 +343,228 @@ export class ThreadsProcessorEngine {
         // Avoid overwriting an existing file
         if (!this.app.vault.getAbstractFileByPath(newPath)) {
           await this.app.vault.rename(file, newPath);
-          new Notice(`✅ 已處理並重新命名：${safeName}`);
+          new Notice(
+            `✅ ${safeName}（${allRelations.length} 個關聯）`
+          );
         } else {
-          new Notice(`✅ 已處理：${file.basename}（標題重複，未重新命名）`);
+          new Notice(
+            `✅ ${file.basename}（${allRelations.length} 個關聯，名稱重複未改名）`
+          );
         }
       } else {
-        new Notice(`✅ 已處理：${file.basename}`);
+        new Notice(
+          `✅ ${file.basename}（${allRelations.length} 個關聯）`
+        );
       }
     } else {
-      new Notice(`✅ 已處理：${file.basename}`);
+      new Notice(
+        `✅ ${file.basename}（${allRelations.length} 個關聯）`
+      );
     }
   }
 
-  // ---- Helpers ---------------------------------------------------------------
+  // ---- Relation Matching ----------------------------------------------------
 
   /**
-   * Collect all markdown file basenames in the vault, excluding the
-   * target folder itself, checkpoints, and system folders.
+   * Resolve LLM-suggested relation names against the actual vault page
+   * basenames using fuzzy matching:
+   *   1. Exact match (case-insensitive)
+   *   2. Substring containment (e.g. "觀影心得" matches "觀影心得")
+   *   3. Partial keyword overlap
    */
-  private collectVaultPageNames(excludeFolder: string): string[] {
+  private resolveRelations(
+    suggestions: string[],
+    allBasenames: Set<string>
+  ): string[] {
+    const resolved: string[] = [];
+    const basenameArray = Array.from(allBasenames);
+
+    for (const suggestion of suggestions) {
+      if (!suggestion || suggestion.trim().length === 0) continue;
+      const suggLower = suggestion.trim().toLowerCase();
+
+      // 1. Exact match (case-insensitive)
+      const exact = basenameArray.find(
+        (b) => b.toLowerCase() === suggLower
+      );
+      if (exact) {
+        resolved.push(exact);
+        continue;
+      }
+
+      // 2. One contains the other
+      const containsMatch = basenameArray.find(
+        (b) =>
+          b.toLowerCase().includes(suggLower) ||
+          suggLower.includes(b.toLowerCase())
+      );
+      if (containsMatch) {
+        resolved.push(containsMatch);
+        continue;
+      }
+
+      // 3. Significant keyword overlap (≥2 chars overlap in any segment)
+      const suggTokens = this.tokenize(suggestion);
+      let bestMatch: string | null = null;
+      let bestScore = 0;
+
+      for (const basename of basenameArray) {
+        const baseTokens = this.tokenize(basename);
+        let score = 0;
+        for (const st of suggTokens) {
+          for (const bt of baseTokens) {
+            if (st.length >= 2 && bt.length >= 2) {
+              if (st === bt) {
+                score += 3;
+              } else if (st.includes(bt) || bt.includes(st)) {
+                score += 2;
+              }
+            }
+          }
+        }
+        if (score > bestScore && score >= 3) {
+          bestScore = score;
+          bestMatch = basename;
+        }
+      }
+
+      if (bestMatch) {
+        resolved.push(bestMatch);
+      }
+      // If no match at all, the LLM hallucinated a name — skip silently
+    }
+
+    return Array.from(new Set(resolved));
+  }
+
+  /**
+   * Tokenize a string into meaningful segments for fuzzy matching.
+   */
+  private tokenize(str: string): string[] {
+    // Split on common delimiters, filter short fragments
+    return str
+      .toLowerCase()
+      .split(/[\s\-_：:，,、。.()（）《》「」\[\]\/]+/)
+      .filter((t) => t.length >= 2);
+  }
+
+  // ---- Hub Page Creation ----------------------------------------------------
+
+  /**
+   * Create a new thematic hub page in the appropriate category folder.
+   * These are lightweight "index" pages that serve as connection points
+   * for future notes on the same topic.
+   */
+  private async createHubPage(
+    name: string,
+    description: string,
+    category: string
+  ): Promise<void> {
+    // Validate category
+    if (!VALID_CATEGORIES.includes(category)) {
+      category = "30_生活與創作"; // default for life/threads content
+    }
+
+    // Ensure the category folder exists
+    const destFolder = normalizePath(category);
+    if (!this.app.vault.getAbstractFileByPath(destFolder)) {
+      await this.app.vault.createFolder(destFolder);
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    const filePath = normalizePath(`${category}/${name}.md`);
+
+    // Don't overwrite if it somehow already exists
+    if (this.app.vault.getAbstractFileByPath(filePath)) {
+      return;
+    }
+
+    const content = [
+      "---",
+      `title: "${name}"`,
+      "type: hub",
+      `category: ${category}`,
+      `created: ${today}`,
+      "tags:",
+      "  - hub",
+      "  - auto-generated",
+      "---",
+      "",
+      `# ${name}`,
+      "",
+      `> [!info] 自動建立的主題頁`,
+      `> 此頁面由 Threads 處理器自動建立，作為同主題筆記的連結中心。`,
+      `> 建立日期：${today}`,
+      "",
+      `## 主題描述`,
+      "",
+      description,
+      "",
+      `## 相關筆記`,
+      "",
+      "> 以下筆記會自動透過反向連結（Backlinks）出現在這裡。",
+      "",
+    ].join("\n");
+
+    await this.app.vault.create(filePath, content);
+  }
+
+  // ---- Vault Page Collection ------------------------------------------------
+
+  /**
+   * Collect all vault pages grouped by their parent folder.
+   * Returns both a formatted string for the prompt and a Set of basenames.
+   */
+  private collectVaultPages(excludeFolder: string): {
+    grouped: string;
+    allBasenames: Set<string>;
+  } {
     const allFiles = this.app.vault.getMarkdownFiles();
     const excludeNorm = normalizePath(excludeFolder).toLowerCase();
 
-    const names: Set<string> = new Set();
+    // Group by parent folder
+    const folderMap: Map<string, string[]> = new Map();
+    const allBasenames: Set<string> = new Set();
+
     for (const f of allFiles) {
       const pathLower = f.path.toLowerCase();
       if (
         pathLower.startsWith(excludeNorm) ||
         pathLower.startsWith("_checkpoints") ||
-        pathLower.includes(".obsidian")
+        pathLower.includes(".obsidian") ||
+        pathLower.startsWith("copilot-custom-prompts") ||
+        pathLower.startsWith("00_inbox")
       ) {
         continue;
       }
-      names.add(f.basename);
+
+      allBasenames.add(f.basename);
+
+      const folder = f.parent?.path || "(root)";
+      if (!folderMap.has(folder)) {
+        folderMap.set(folder, []);
+      }
+      folderMap.get(folder)!.push(f.basename);
     }
 
-    return Array.from(names).sort();
+    // Build a grouped string representation
+    const lines: string[] = [];
+    const sortedFolders = Array.from(folderMap.keys()).sort();
+    for (const folder of sortedFolders) {
+      const pages = folderMap.get(folder)!;
+      lines.push(`\n📁 ${folder}/`);
+      for (const page of pages.sort()) {
+        lines.push(`  - ${page}`);
+      }
+    }
+
+    return {
+      grouped: lines.join("\n"),
+      allBasenames,
+    };
   }
+
+  // ---- File Helpers ---------------------------------------------------------
 
   /**
    * Get all markdown files directly inside the given folder (non-recursive).
