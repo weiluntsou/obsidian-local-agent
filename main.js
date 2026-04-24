@@ -27,7 +27,7 @@ __export(main_exports, {
   default: () => LocalAgentPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian8 = require("obsidian");
+var import_obsidian9 = require("obsidian");
 
 // src/api.ts
 var import_obsidian = require("obsidian");
@@ -1099,8 +1099,261 @@ ${content}
   }
 };
 
-// src/writer.ts
+// src/threadsProcessor.ts
 var import_obsidian5 = require("obsidian");
+var THREADS_PROCESSOR_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u7CBE\u6E96\u7684\u5167\u5BB9\u5206\u6790\u52A9\u624B\uFF0C\u5C08\u9580\u8655\u7406\u793E\u7FA4\u5A92\u9AD4\u77ED\u6587\uFF08\u4F86\u81EA Threads / Instagram\uFF09\u3002
+
+\u4F60\u5C07\u6536\u5230\u4E00\u7BC7\u5E16\u6587\u7684\u300C\u539F\u59CB\u6A94\u540D\u300D\u548C\u300C\u5167\u6587\u300D\uFF0C\u4EE5\u53CA\u4F7F\u7528\u8005 Obsidian \u77E5\u8B58\u5EAB\u4E2D\u300C\u73FE\u6709\u9801\u9762\u6E05\u55AE\u300D\u3002
+
+\u8ACB\u56B4\u683C\u4F9D\u7167\u4EE5\u4E0B JSON \u683C\u5F0F\u56DE\u50B3\uFF0C\u4E0D\u8981\u8F38\u51FA\u4EFB\u4F55\u5176\u4ED6\u6587\u5B57\uFF1A
+
+{
+  "title": "\uFF08\u6839\u64DA\u5167\u6587\u4E0B\u4E00\u500B\u7CBE\u6E96\u7684\u7E41\u9AD4\u4E2D\u6587\u6A19\u984C\uFF0C\u6700\u591A 20 \u500B\u5B57\u3002\u82E5\u539F\u59CB\u6A94\u540D\u4E2D\u6709\u65E5\u671F\u5982 2025-06-17\uFF0C\u8ACB\u5C07\u65E5\u671F\u4FDD\u7559\u5728\u6A19\u984C\u524D\u9762\uFF0C\u683C\u5F0F\u70BA YYYY-MM-DD \u52A0\u7A7A\u683C\u518D\u63A5\u6A19\u984C\uFF0C\u65E5\u671F\u4E0D\u8A08\u5165 20 \u5B57\u4E0A\u9650\uFF09",
+  "summary": "\uFF08\u82E5\u5167\u6587\u8D85\u904E 100 \u5B57\uFF0C\u8ACB\u5BEB\u4E00\u6BB5 50 \u5B57\u4EE5\u5167\u7684\u6458\u8981\uFF0C\u6355\u6349\u6838\u5FC3\u4E3B\u984C\u6216\u89C0\u9EDE\uFF1B\u82E5\u4E0D\u8D85\u904E 100 \u5B57\u5247\u56DE\u50B3\u7A7A\u5B57\u4E32 ""\uFF09",
+  "relations": ["\u9801\u9762\u540D\u7A31A", "\u9801\u9762\u540D\u7A31B"]
+}
+
+## \u95DC\u65BC relations \u7684\u898F\u5247
+- \u5F9E\u300C\u73FE\u6709\u9801\u9762\u6E05\u55AE\u300D\u4E2D\u6311\u9078 1 \u5230 3 \u500B\u8207\u5167\u6587\u4E3B\u984C\u6700\u76F8\u95DC\u7684\u9801\u9762\u3002
+- \u53EA\u80FD\u5F9E\u63D0\u4F9B\u7684\u6E05\u55AE\u4E2D\u9078\u64C7\uFF0C\u4E0D\u53EF\u81EA\u5275\u9801\u9762\u540D\u7A31\u3002
+- \u82E5\u6C92\u6709\u4EFB\u4F55\u76F8\u95DC\u9801\u9762\uFF0C\u56DE\u50B3\u7A7A\u9663\u5217 []\u3002
+- \u56DE\u50B3\u7684\u662F\u9801\u9762\u540D\u7A31\uFF08\u4E0D\u542B\u8DEF\u5F91\u524D\u7DB4\uFF09\uFF0C\u4F8B\u5982 "\u65FA\u5361" \u800C\u975E "30_Life_&_Creations/\u65FA\u5361"\u3002
+
+## \u95DC\u65BC title \u7684\u898F\u5247
+- \u6A19\u984C\u5FC5\u9808\u662F\u7E41\u9AD4\u4E2D\u6587\u3002
+- \u6A19\u984C\u61C9\u7CBE\u6E96\u6982\u62EC\u6587\u7AE0\u7684\u6838\u5FC3\u5167\u5BB9\u6216\u4E3B\u984C\u3002
+- \u4E0D\u8981\u4F7F\u7528\u5F15\u865F\u5305\u8986\u6A19\u984C\u6587\u5B57\u672C\u8EAB\u3002
+- \u82E5\u6A94\u540D\u4E2D\u542B\u6709\u65E5\u671F\uFF0C\u6A19\u984C\u683C\u5F0F\u7BC4\u4F8B\uFF1A"2025-06-17 \u8349\u5C6F\u78B3\u6854\u71D2\u8089\u4FBF\u7576\u521D\u9AD4\u9A57"
+
+## \u95DC\u65BC summary \u7684\u898F\u5247
+- \u6458\u8981\u61C9\u7576\u662F\u4E00\u6BB5\u7CBE\u7149\u7684\u9673\u8FF0\u53E5\uFF0C\u4E0D\u662F\u689D\u5217\u5F0F\u3002
+- \u82E5\u5167\u6587\u5305\u542B\u98DF\u8A18\u3001\u5F71\u8A55\u3001\u66F8\u8A55\u7B49\uFF0C\u6458\u8981\u61C9\u9EDE\u51FA\u8A55\u50F9\u6216\u7D50\u8AD6\u3002`;
+var ThreadsProcessorEngine = class {
+  constructor(app, apiClient, temperature) {
+    this.app = app;
+    this.apiClient = apiClient;
+    this.temperature = temperature;
+  }
+  /**
+   * Process all markdown files inside the given folder path.
+   * Returns the count of successfully processed files.
+   */
+  async processBatch(folderPath, onProgress, shouldCancel) {
+    const files = this.getMarkdownFiles(folderPath);
+    if (files.length === 0) {
+      new import_obsidian5.Notice(`\u5728\u300C${folderPath}\u300D\u4E2D\u627E\u4E0D\u5230\u4EFB\u4F55 Markdown \u6A94\u6848\u3002`);
+      return 0;
+    }
+    new import_obsidian5.Notice(`\u627E\u5230 ${files.length} \u7BC7 Threads \u5E16\u6587\uFF0C\u958B\u59CB\u6279\u6B21\u8655\u7406...`);
+    const existingPages = this.collectVaultPageNames(folderPath);
+    let processedCount = 0;
+    for (let i = 0; i < files.length; i++) {
+      if (shouldCancel == null ? void 0 : shouldCancel()) {
+        new import_obsidian5.Notice("Threads \u6279\u6B21\u8655\u7406\u5DF2\u88AB\u4F7F\u7528\u8005\u53D6\u6D88\u3002");
+        break;
+      }
+      const file = files[i];
+      onProgress == null ? void 0 : onProgress(i + 1, files.length, file.basename);
+      try {
+        const content = await this.app.vault.read(file);
+        if (content.includes("threads-processed: true")) {
+          console.log(
+            `[ThreadsProcessor] Skipping ${file.basename}: already processed.`
+          );
+          continue;
+        }
+        await this.processFile(file, content, existingPages);
+        processedCount++;
+      } catch (err) {
+        console.error(
+          `[ThreadsProcessor] Failed to process ${file.basename}:`,
+          err
+        );
+      }
+    }
+    return processedCount;
+  }
+  // ---- Single-file processing -----------------------------------------------
+  async processFile(file, content, existingPages) {
+    var _a;
+    const body = this.stripFrontmatter(content);
+    if (body.trim().length < 10) {
+      console.log(
+        `[ThreadsProcessor] Skipping ${file.basename}: body too short.`
+      );
+      return;
+    }
+    await this.saveCheckpoint(file, content);
+    const pageListStr = existingPages.slice(0, 200).join("\n");
+    const userPrompt = [
+      `\u3010\u539F\u59CB\u6A94\u540D\u3011\uFF1A${file.basename}`,
+      "",
+      `\u3010\u5167\u6587\u3011\uFF1A`,
+      body,
+      "",
+      `\u3010\u73FE\u6709\u9801\u9762\u6E05\u55AE\u3011\uFF08\u5171 ${existingPages.length} \u9801\uFF0C\u4EE5\u4E0B\u5217\u51FA\u524D 200 \u500B\uFF09\uFF1A`,
+      pageListStr
+    ].join("\n");
+    const rawResponse = await this.apiClient.prompt(
+      THREADS_PROCESSOR_PROMPT,
+      userPrompt,
+      this.temperature
+    );
+    const parsed = parseJsonFromLLM(rawResponse);
+    if (!parsed) {
+      console.warn(
+        `[ThreadsProcessor] Failed to parse LLM response for ${file.basename}. Raw:`,
+        rawResponse.substring(0, 300)
+      );
+      return;
+    }
+    const { title, summary, relations } = parsed;
+    await this.app.fileManager.processFrontMatter(file, (fm) => {
+      fm["threads-processed"] = true;
+      if (title) {
+        fm["title"] = title;
+      }
+    });
+    let appendSection = "";
+    if (summary && summary.trim().length > 0) {
+      appendSection += `
+
+---
+
+## \u6458\u8981
+
+${summary.trim()}
+`;
+    }
+    if (relations && relations.length > 0) {
+      const validRelations = relations.filter(
+        (r) => existingPages.includes(r)
+      );
+      if (validRelations.length > 0) {
+        appendSection += `
+## \u95DC\u806F\u7B46\u8A18
+
+`;
+        for (const rel of validRelations) {
+          appendSection += `- [[${rel}]]
+`;
+        }
+      }
+    }
+    if (appendSection) {
+      const currentContent = await this.app.vault.read(file);
+      await this.app.vault.modify(file, currentContent + appendSection);
+    }
+    if (title) {
+      const safeName = title.replace(/[\\/:\"*?<>|#^\[\]]/g, "").trim().slice(0, 60);
+      if (safeName && safeName !== file.basename) {
+        const parentDir = ((_a = file.parent) == null ? void 0 : _a.path) || "";
+        const newPath = (0, import_obsidian5.normalizePath)(`${parentDir}/${safeName}.md`);
+        if (!this.app.vault.getAbstractFileByPath(newPath)) {
+          await this.app.vault.rename(file, newPath);
+          new import_obsidian5.Notice(`\u2705 \u5DF2\u8655\u7406\u4E26\u91CD\u65B0\u547D\u540D\uFF1A${safeName}`);
+        } else {
+          new import_obsidian5.Notice(`\u2705 \u5DF2\u8655\u7406\uFF1A${file.basename}\uFF08\u6A19\u984C\u91CD\u8907\uFF0C\u672A\u91CD\u65B0\u547D\u540D\uFF09`);
+        }
+      } else {
+        new import_obsidian5.Notice(`\u2705 \u5DF2\u8655\u7406\uFF1A${file.basename}`);
+      }
+    } else {
+      new import_obsidian5.Notice(`\u2705 \u5DF2\u8655\u7406\uFF1A${file.basename}`);
+    }
+  }
+  // ---- Helpers ---------------------------------------------------------------
+  /**
+   * Collect all markdown file basenames in the vault, excluding the
+   * target folder itself, checkpoints, and system folders.
+   */
+  collectVaultPageNames(excludeFolder) {
+    const allFiles = this.app.vault.getMarkdownFiles();
+    const excludeNorm = (0, import_obsidian5.normalizePath)(excludeFolder).toLowerCase();
+    const names = /* @__PURE__ */ new Set();
+    for (const f of allFiles) {
+      const pathLower = f.path.toLowerCase();
+      if (pathLower.startsWith(excludeNorm) || pathLower.startsWith("_checkpoints") || pathLower.includes(".obsidian")) {
+        continue;
+      }
+      names.add(f.basename);
+    }
+    return Array.from(names).sort();
+  }
+  /**
+   * Get all markdown files directly inside the given folder (non-recursive).
+   * Sorted by modification time (newest first).
+   */
+  getMarkdownFiles(folderPath) {
+    const normalised = (0, import_obsidian5.normalizePath)(folderPath);
+    const abstractFile = this.app.vault.getAbstractFileByPath(normalised);
+    if (!abstractFile || !(abstractFile instanceof import_obsidian5.TFolder)) {
+      return [];
+    }
+    const folder = abstractFile;
+    const mdFiles = [];
+    for (const child of folder.children) {
+      if (child instanceof import_obsidian5.TFile && child.extension === "md") {
+        mdFiles.push(child);
+      }
+    }
+    mdFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
+    return mdFiles;
+  }
+  /**
+   * Strip YAML frontmatter, returning only the body text.
+   */
+  stripFrontmatter(content) {
+    const fmRegex = /^---\s*\n[\s\S]*?\n---\s*\n?/;
+    return content.replace(fmRegex, "").trim();
+  }
+  /**
+   * Save a checkpoint snapshot before modifying the file.
+   */
+  async saveCheckpoint(file, content) {
+    try {
+      const checkpointDir = (0, import_obsidian5.normalizePath)(
+        `_checkpoints/${file.basename}`
+      );
+      const existingDir = this.app.vault.getAbstractFileByPath(checkpointDir);
+      if (!existingDir) {
+        await this.app.vault.createFolder(checkpointDir);
+      }
+      const now = /* @__PURE__ */ new Date();
+      const ts = now.toISOString().replace(/[:.]/g, "-");
+      const checkpointPath = (0, import_obsidian5.normalizePath)(
+        `${checkpointDir}/${file.basename}_${ts}.md`
+      );
+      const header = [
+        "---",
+        "type: checkpoint",
+        `source: "[[${file.basename}]]"`,
+        `checkpoint_created: ${now.toISOString()}`,
+        `original_path: "${file.path}"`,
+        "---",
+        "",
+        "> [!warning] \u6B64\u70BA\u81EA\u52D5\u4FDD\u5B58\u7684\u8B8A\u66F4\u6AA2\u67E5\u9EDE\uFF08Checkpoint\uFF09",
+        `> \u539F\u59CB\u6A94\u6848\uFF1A[[${file.basename}]]`,
+        `> \u5FEB\u7167\u6642\u9593\uFF1A${now.toISOString()}`,
+        "",
+        "---",
+        ""
+      ].join("\n");
+      await this.app.vault.create(checkpointPath, header + content);
+      console.log(
+        `[ThreadsProcessor] Checkpoint saved: ${checkpointPath}`
+      );
+    } catch (err) {
+      console.warn(
+        "[ThreadsProcessor] Failed to save checkpoint:",
+        err
+      );
+    }
+  }
+};
+
+// src/writer.ts
+var import_obsidian6 = require("obsidian");
 var SUGGEST_PROMPT = `\u4F60\u662F\u4E00\u500B\u77E5\u8B58\u5EAB\u6AA2\u7D22\u4EE3\u7406\u3002\u8ACB\u95B1\u8B80\u4F7F\u7528\u8005\u7684\u300C\u5BEB\u4F5C\u76EE\u6A19\u300D\uFF0C\u4E26\u5F9E\u4E0B\u65B9\u63D0\u4F9B\u7684\u300C\u53EF\u7528\u7B46\u8A18\u6A19\u984C\u6E05\u55AE\u300D\u4E2D\uFF0C\u6311\u9078\u51FA\u6700\u76F8\u95DC\u3001\u6700\u80FD\u652F\u63F4\u6B64\u76EE\u6A19\u7684 5 \u5230 10 \u7BC7\u7B46\u8A18\u3002
 \u56B4\u683C\u8981\u6C42\uFF1A
 1. \u53EA\u80FD\u6311\u9078\u6E05\u55AE\u300C\u53EF\u7528\u7B46\u8A18\u6A19\u984C\u6E05\u55AE\u300D\u4E2D\u5BE6\u969B\u5B58\u5728\u7684\u7B46\u8A18\uFF0C\u7D55\u4E0D\u80FD\u81EA\u5DF1\u767C\u660E\u540D\u7A31\u3002
@@ -1124,7 +1377,7 @@ var SWEEP_PROMPT = `\u4F60\u662F\u4E00\u500B\u56B4\u8B39\u7684\u5BEB\u4F5C\u52A9
 2. \u662F\u5426\u5177\u5099\u81F3\u5C11\u4E00\u500B\u6307\u5411\u73FE\u6709\u7B46\u8A18\u7684\u9023\u7D50 \`[[ ]]\`\uFF1F
 3. \u5F9E\u8349\u7A3F\u5167\u5BB9\u4E2D\u5C0B\u627E\u53EF\u80FD\u7684\u908F\u8F2F\u76F2\u5340\uFF0C\u5EFA\u8B70\u662F\u5426\u9700\u8981\u88DC\u5145\u5176\u4ED6\u4EBA\u7269\u8A8C\uFF08\u4EBA\u7269\u8A18\u9304\uFF08People notes\uFF09\uFF09\u6216\u5C08\u6848\u80CC\u666F\u3002
 \u8ACB\u4EE5\u7C21\u6F54\u7684\u5217\u8868\u56DE\u5831\u4F60\u7684\u5BE9\u6838\u8207\u6383\u9664\u7D50\u679C\u3002`;
-var TopicInputModal = class extends import_obsidian5.Modal {
+var TopicInputModal = class extends import_obsidian6.Modal {
   constructor(app, onSubmit) {
     super(app);
     this.topic = "";
@@ -1134,14 +1387,14 @@ var TopicInputModal = class extends import_obsidian5.Modal {
     const { contentEl } = this;
     contentEl.createEl("h2", { text: "\u8ACB\u63CF\u8FF0\u4F60\u60F3\u5BEB\u4EC0\u9EBC\uFF1F (\u60C5\u5883\u5DE5\u7A0B)" });
     contentEl.createEl("p", { text: "\u8ACB\u8F38\u5165\u9019\u7BC7\u6587\u7AE0\u7684\u4E3B\u984C\u65B9\u5411\u6216\u60F3\u63A2\u8A0E\u7684\u554F\u984C\u3002Agent \u5C07\u6839\u64DA\u60A8\u7684\u76EE\u6A19\uFF0C\u6383\u63CF\u6574\u500B Vault \u4E26\u70BA\u60A8\u627E\u51FA\u73FE\u6709\u7684\u76F8\u95DC\u5EAB\u5B58\u7B46\u8A18\u505A\u70BA\u53C3\u8003\uFF01" });
-    new import_obsidian5.Setting(contentEl).setName("\u5BEB\u4F5C\u76EE\u6A19\u8207\u95DC\u9375\u5B57").addTextArea((text) => {
+    new import_obsidian6.Setting(contentEl).setName("\u5BEB\u4F5C\u76EE\u6A19\u8207\u95DC\u9375\u5B57").addTextArea((text) => {
       text.inputEl.setAttr("rows", 4);
       text.inputEl.style.width = "100%";
       text.onChange((value) => {
         this.topic = value;
       });
     });
-    new import_obsidian5.Setting(contentEl).addButton(
+    new import_obsidian6.Setting(contentEl).addButton(
       (btn) => btn.setButtonText("\u81EA\u52D5\u68C0\u7D22\u8207\u5EFA\u7ACB\u8A08\u756B").setCta().onClick(() => {
         this.close();
         this.onSubmit(this.topic);
@@ -1164,7 +1417,7 @@ var WriterEngine = class {
    * 建立一個新的專案資料夾與 plan.md
    */
   async initProject(projectName, objective) {
-    new import_obsidian5.Notice("\u4EE3\u7406\u63A8\u7406\uFF08Agentic Reasoning\uFF09\uFF1A\u6B63\u5728\u641C\u5C0B\u4F60\u7684\u77E5\u8B58\u5EAB\u6A19\u984C...");
+    new import_obsidian6.Notice("\u4EE3\u7406\u63A8\u7406\uFF08Agentic Reasoning\uFF09\uFF1A\u6B63\u5728\u641C\u5C0B\u4F60\u7684\u77E5\u8B58\u5EAB\u6A19\u984C...");
     try {
       const allTitles = this.app.vault.getMarkdownFiles().map((f) => f.basename).filter((n) => !n.includes("Atomic Note") && n !== "plan" && n !== "draft");
       const promptInput = `### \u5BEB\u4F5C\u76EE\u6A19
@@ -1178,12 +1431,12 @@ ${allTitles.join("\n")}`;
         this.temperature
       );
       const safeName = projectName.replace(/[\\/:"*?<>|#^\[\]]/g, "").trim() || "\u65B0\u5C08\u6848";
-      const destFolder = (0, import_obsidian5.normalizePath)(`99_\u672A\u5206\u985E/${safeName}`);
+      const destFolder = (0, import_obsidian6.normalizePath)(`99_\u672A\u5206\u985E/${safeName}`);
       const abstractFolder = this.app.vault.getAbstractFileByPath(destFolder);
       if (!abstractFolder) {
         await this.app.vault.createFolder(destFolder);
       }
-      const planPath = (0, import_obsidian5.normalizePath)(`${destFolder}/plan.md`);
+      const planPath = (0, import_obsidian6.normalizePath)(`${destFolder}/plan.md`);
       if (!this.app.vault.getAbstractFileByPath(planPath)) {
         const planTemplate = `---
 type: plan
@@ -1207,21 +1460,21 @@ ${suggestedLinks.trim()}
 [\u900F\u904E\u6668\u9593\u7C21\u5831\u6307\u4EE4\u81EA\u52D5\u751F\u6210\u5340\u584A]
 `;
         const file = await this.app.vault.create(planPath, planTemplate);
-        new import_obsidian5.Notice(`\u5DF2\u521D\u59CB\u5316\u5BEB\u4F5C\u5C08\u6848\uFF1A${safeName}`);
+        new import_obsidian6.Notice(`\u5DF2\u521D\u59CB\u5316\u5BEB\u4F5C\u5C08\u6848\uFF1A${safeName}`);
         await this.app.workspace.getLeaf(false).openFile(file);
       } else {
-        new import_obsidian5.Notice("\u5C08\u6848\u5DF2\u5B58\u5728\uFF01");
+        new import_obsidian6.Notice("\u5C08\u6848\u5DF2\u5B58\u5728\uFF01");
       }
     } catch (err) {
       console.error("[WriterEngine] Init failed:", err);
-      new import_obsidian5.Notice(`\u521D\u59CB\u5316\u5931\u6557\uFF1A${err.message}`);
+      new import_obsidian6.Notice(`\u521D\u59CB\u5316\u5931\u6557\uFF1A${err.message}`);
     }
   }
   /**
    * 2. Standup (Retrieve recent context)
    */
   async generateStandup(planFile) {
-    new import_obsidian5.Notice("\u57F7\u884C\u4EE3\u7406\u6668\u9593\u7C21\u5831\uFF08\u901A\u904E\u5716\u8868\u8207\u6642\u9593\u8490\u96C6\u80CC\u666F\u8CC7\u8A0A\uFF09...");
+    new import_obsidian6.Notice("\u57F7\u884C\u4EE3\u7406\u6668\u9593\u7C21\u5831\uFF08\u901A\u904E\u5716\u8868\u8207\u6642\u9593\u8490\u96C6\u80CC\u666F\u8CC7\u8A0A\uFF09...");
     try {
       const planContent = await this.app.vault.read(planFile);
       const candidateFiles = /* @__PURE__ */ new Set();
@@ -1230,19 +1483,19 @@ ${suggestedLinks.trim()}
       while ((match = explicitLinkRegex.exec(planContent)) !== null) {
         const linkName = match[1].split("|")[0].trim();
         const targetFile = this.app.metadataCache.getFirstLinkpathDest(linkName, planFile.path);
-        if (targetFile && targetFile instanceof import_obsidian5.TFile) {
+        if (targetFile && targetFile instanceof import_obsidian6.TFile) {
           candidateFiles.add(targetFile);
           const resolved = this.app.metadataCache.resolvedLinks;
           if (resolved[targetFile.path]) {
             for (const outlink in resolved[targetFile.path]) {
               const outF = this.app.vault.getAbstractFileByPath(outlink);
-              if (outF && outF instanceof import_obsidian5.TFile) candidateFiles.add(outF);
+              if (outF && outF instanceof import_obsidian6.TFile) candidateFiles.add(outF);
             }
           }
           for (const sourcePath in resolved) {
             if (resolved[sourcePath][targetFile.path]) {
               const bgFile = this.app.vault.getAbstractFileByPath(sourcePath);
-              if (bgFile && bgFile instanceof import_obsidian5.TFile) candidateFiles.add(bgFile);
+              if (bgFile && bgFile instanceof import_obsidian6.TFile) candidateFiles.add(bgFile);
             }
           }
         }
@@ -1264,7 +1517,7 @@ ${suggestedLinks.trim()}
 ${text.substring(0, 600)}`;
       }
       if (notesBundle.length === 0) {
-        new import_obsidian5.Notice("No related graph or temporal notes found for standup.");
+        new import_obsidian6.Notice("No related graph or temporal notes found for standup.");
         return;
       }
       const userPrompt = `### \u5BEB\u4F5C\u8A08\u756B\u76EE\u6A19
@@ -1279,10 +1532,10 @@ ${notesBundle}`;
       );
       const mergedContent = planContent + "\n\n" + response.trim();
       await this.app.vault.modify(planFile, mergedContent);
-      new import_obsidian5.Notice("Standup completed! Context added to plan.md");
+      new import_obsidian6.Notice("Standup completed! Context added to plan.md");
     } catch (err) {
       console.error("[WriterEngine] Standup failed:", err);
-      new import_obsidian5.Notice(`Standup failed: ${err.message}`);
+      new import_obsidian6.Notice(`Standup failed: ${err.message}`);
     }
   }
   /**
@@ -1290,7 +1543,7 @@ ${notesBundle}`;
    */
   async draftArticle(planFile) {
     var _a;
-    new import_obsidian5.Notice("Drafting article... This will take a while.");
+    new import_obsidian6.Notice("Drafting article... This will take a while.");
     try {
       const planContent = await this.app.vault.read(planFile);
       const response = await this.apiClient.prompt(
@@ -1305,27 +1558,27 @@ ${planContent}`,
       if (cleanDraft.startsWith("```markdown")) {
         cleanDraft = cleanDraft.replace(/^```markdown\n/, "").replace(/\n```$/, "");
       }
-      const draftPath = (0, import_obsidian5.normalizePath)(`${(_a = planFile.parent) == null ? void 0 : _a.path}/draft.md`);
+      const draftPath = (0, import_obsidian6.normalizePath)(`${(_a = planFile.parent) == null ? void 0 : _a.path}/draft.md`);
       const fileExisted = this.app.vault.getAbstractFileByPath(draftPath);
       let draftFile;
-      if (fileExisted && fileExisted instanceof import_obsidian5.TFile) {
+      if (fileExisted && fileExisted instanceof import_obsidian6.TFile) {
         await this.app.vault.modify(fileExisted, cleanDraft);
         draftFile = fileExisted;
       } else {
         draftFile = await this.app.vault.create(draftPath, cleanDraft);
       }
-      new import_obsidian5.Notice("Draft generated successfully.");
+      new import_obsidian6.Notice("Draft generated successfully.");
       await this.app.workspace.getLeaf(false).openFile(draftFile);
     } catch (err) {
       console.error("[WriterEngine] Drafting failed:", err);
-      new import_obsidian5.Notice(`Drafting failed: ${err.message}`);
+      new import_obsidian6.Notice(`Drafting failed: ${err.message}`);
     }
   }
   /**
    * 4. Sweep / Hook Verification
    */
   async sweepDraft(draftFile) {
-    new import_obsidian5.Notice("Running Sweep & Verification on draft...");
+    new import_obsidian6.Notice("Running Sweep & Verification on draft...");
     try {
       const draftContent = await this.app.vault.read(draftFile);
       const response = await this.apiClient.prompt(
@@ -1338,16 +1591,16 @@ ${planContent}`,
 %% SWEEP REVIEW %%
 ${response.replace(/^/gm, "%% ")}`;
       await this.app.vault.modify(draftFile, draftContent + appended);
-      new import_obsidian5.Notice("Sweep completed. Check the bottom of your draft for suggestions.");
+      new import_obsidian6.Notice("Sweep completed. Check the bottom of your draft for suggestions.");
     } catch (err) {
       console.error("[WriterEngine] Sweep failed:", err);
-      new import_obsidian5.Notice(`Sweep failed: ${err.message}`);
+      new import_obsidian6.Notice(`Sweep failed: ${err.message}`);
     }
   }
 };
 
 // src/cleaner.ts
-var import_obsidian6 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 var CLEANER_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u300C\u77E5\u8B58\u6E05\u6383\u8207\u81EA\u6211\u4FEE\u5FA9\uFF08Self-Healing/CPR\uFF09\u300D\u5F15\u64CE\u3002\u4F60\u7684\u4EFB\u52D9\u662F\u7DAD\u8B77\u77E5\u8B58\u5EAB\u7684\u5B8C\u6574\u6027\u8207\u6D41\u52D5\u6027\u3002
 \u4F7F\u7528\u8005\u63D0\u4EA4\u901A\u904E\u53F3\u9375\u89F8\u767C\u6E05\u6383\u7684\u4E00\u7BC7\u5F85\u8655\u7406\u7B46\u8A18\u3002\u8ACB\u57F7\u884C\u4EE5\u4E0B\u6A21\u7D44\uFF1A
 
@@ -1373,7 +1626,7 @@ var CleanerEngine = class {
   }
   async cleanFile(file) {
     var _a;
-    new import_obsidian6.Notice(`\u6B63\u5728\u555F\u52D5\u300C${file.basename}\u300D\u7684 CPR \u4FDD\u7559\u6AA2\u67E5\u9EDE\u6E05\u6383\u4F5C\u696D...`);
+    new import_obsidian7.Notice(`\u6B63\u5728\u555F\u52D5\u300C${file.basename}\u300D\u7684 CPR \u4FDD\u7559\u6AA2\u67E5\u9EDE\u6E05\u6383\u4F5C\u696D...`);
     try {
       const originalContent = await this.app.vault.read(file);
       await this.saveCheckpoint(file, originalContent);
@@ -1383,7 +1636,7 @@ var CleanerEngine = class {
       const frontmatterStr = (originalContent.match(fmRegex) || [""])[0];
       const bodyContent = originalContent.replace(fmRegex, "").trim();
       if (bodyContent.length === 0) {
-        new import_obsidian6.Notice("\u9019\u7BC7\u7B46\u8A18\u6C92\u6709\u5167\u5BB9\u53EF\u4F9B\u6E05\u6383\u8207\u53BB\u788E\u7247\u5316\uFF01");
+        new import_obsidian7.Notice("\u9019\u7BC7\u7B46\u8A18\u6C92\u6709\u5167\u5BB9\u53EF\u4F9B\u6E05\u6383\u8207\u53BB\u788E\u7247\u5316\uFF01");
         return;
       }
       const allFiles = this.app.vault.getMarkdownFiles().filter((f) => f.path !== file.path).map((f) => f.basename);
@@ -1405,7 +1658,7 @@ ${bodyContent}
       );
       const parsed = parseJsonFromLLM(rawResponse);
       if (!parsed || typeof parsed.compressedBody !== "string") {
-        new import_obsidian6.Notice("\u6E05\u6383\u5F15\u64CE\u56DE\u50B3\u4E86\u932F\u8AA4\u7684 JSON \u7D50\u69CB\uFF0C\u7121\u6CD5\u5B8C\u6210\u3002");
+        new import_obsidian7.Notice("\u6E05\u6383\u5F15\u64CE\u56DE\u50B3\u4E86\u932F\u8AA4\u7684 JSON \u7D50\u69CB\uFF0C\u7121\u6CD5\u5B8C\u6210\u3002");
         console.error("[CleanerEngine] Failed to parse JSON:", rawResponse);
         return;
       }
@@ -1438,23 +1691,23 @@ ${bodyContent}
           fm["tags"] = ["#AI-Cleaned-Orphan"];
         }
       });
-      new import_obsidian6.Notice(`\u6E05\u6383\u8207\u53BB\u788E\u7247\u5316\u5B8C\u6210\uFF01\uFF08\u72C0\u614B\uFF1A${parsed.actionStatus}\uFF09`);
+      new import_obsidian7.Notice(`\u6E05\u6383\u8207\u53BB\u788E\u7247\u5316\u5B8C\u6210\uFF01\uFF08\u72C0\u614B\uFF1A${parsed.actionStatus}\uFF09`);
       if (parsed.actionStatus === "archived") {
         const contentAfterFm = await this.app.vault.read(file);
         if (contentAfterFm.includes("#Done") && ((_a = file.parent) == null ? void 0 : _a.path) === "00_Inbox") {
           let matchCat = await this.getCategory(file);
           if (matchCat && matchCat !== "00_Inbox") {
             await this.moveFileToCategory(file, matchCat);
-            new import_obsidian6.Notice(`\u5DF2\u5C07\u904E\u6642\u5167\u5BB9\u81EA\u52D5\u9077\u79FB\u4E26\u6B78\u6A94\u81F3\uFF1A${matchCat}`);
+            new import_obsidian7.Notice(`\u5DF2\u5C07\u904E\u6642\u5167\u5BB9\u81EA\u52D5\u9077\u79FB\u4E26\u6B78\u6A94\u81F3\uFF1A${matchCat}`);
           } else {
             await this.moveFileToCategory(file, "99_\u672A\u5206\u985E");
-            new import_obsidian6.Notice(`\u5DF2\u5C07\u5167\u5BB9\u81EA\u52D5\u6B78\u6A94\u81F3 99_\u672A\u5206\u985E`);
+            new import_obsidian7.Notice(`\u5DF2\u5C07\u5167\u5BB9\u81EA\u52D5\u6B78\u6A94\u81F3 99_\u672A\u5206\u985E`);
           }
         }
       }
     } catch (err) {
       console.error("[CleanerEngine] Error:", err);
-      new import_obsidian6.Notice(`\u6E05\u6383\u904E\u7A0B\u767C\u751F\u932F\u8AA4: ${err.message}`);
+      new import_obsidian7.Notice(`\u6E05\u6383\u904E\u7A0B\u767C\u751F\u932F\u8AA4: ${err.message}`);
     }
   }
   // --- Helpers ---
@@ -1466,12 +1719,12 @@ ${bodyContent}
     return cat;
   }
   async moveFileToCategory(file, category) {
-    const destFolder = (0, import_obsidian6.normalizePath)(category);
+    const destFolder = (0, import_obsidian7.normalizePath)(category);
     const abstractFolder = this.app.vault.getAbstractFileByPath(destFolder);
     if (!abstractFolder) {
       await this.app.vault.createFolder(destFolder);
     }
-    const newPath = (0, import_obsidian6.normalizePath)(`${category}/${file.name}`);
+    const newPath = (0, import_obsidian7.normalizePath)(`${category}/${file.name}`);
     if (!this.app.vault.getAbstractFileByPath(newPath)) {
       await this.app.vault.rename(file, newPath);
     }
@@ -1493,14 +1746,14 @@ ${bodyContent}
   }
   async saveCheckpoint(file, content) {
     try {
-      const checkpointDir = (0, import_obsidian6.normalizePath)(`_checkpoints/${file.basename}`);
+      const checkpointDir = (0, import_obsidian7.normalizePath)(`_checkpoints/${file.basename}`);
       const existingDir = this.app.vault.getAbstractFileByPath(checkpointDir);
       if (!existingDir) {
         await this.app.vault.createFolder(checkpointDir);
       }
       const now = /* @__PURE__ */ new Date();
       const ts = now.toISOString().replace(/[:.]/g, "-");
-      const checkpointPath = (0, import_obsidian6.normalizePath)(`${checkpointDir}/${file.basename}_${ts}.md`);
+      const checkpointPath = (0, import_obsidian7.normalizePath)(`${checkpointDir}/${file.basename}_${ts}.md`);
       const header = [
         "---",
         "type: checkpoint",
@@ -1519,7 +1772,7 @@ ${bodyContent}
 };
 
 // src/settings.ts
-var import_obsidian7 = require("obsidian");
+var import_obsidian8 = require("obsidian");
 var DEFAULT_SETTINGS = {
   apiEndpoint: "http://localhost:11434",
   defaultModel: "llama3",
@@ -1530,7 +1783,7 @@ var DEFAULT_SETTINGS = {
   aggregationTemperature: 0.5,
   refinementTemperature: 0.3
 };
-var LocalAgentSettingTab = class extends import_obsidian7.PluginSettingTab {
+var LocalAgentSettingTab = class extends import_obsidian8.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -1544,7 +1797,7 @@ var LocalAgentSettingTab = class extends import_obsidian7.PluginSettingTab {
       cls: "setting-item-description"
     });
     containerEl.createEl("h2", { text: "API Connection" });
-    new import_obsidian7.Setting(containerEl).setName("API Endpoint").setDesc(
+    new import_obsidian8.Setting(containerEl).setName("API Endpoint").setDesc(
       "Base URL of your local LLM server (Ollama, LM Studio, etc.). Example: http://localhost:11434"
     ).addText(
       (text) => text.setPlaceholder("http://localhost:11434").setValue(this.plugin.settings.apiEndpoint).onChange(async (value) => {
@@ -1552,7 +1805,7 @@ var LocalAgentSettingTab = class extends import_obsidian7.PluginSettingTab {
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian7.Setting(containerEl).setName("Default Model").setDesc(
+    new import_obsidian8.Setting(containerEl).setName("Default Model").setDesc(
       "The model identifier to use for inference (e.g. llama3, mistral, deepseek-r1)."
     ).addText(
       (text) => text.setPlaceholder("llama3").setValue(this.plugin.settings.defaultModel).onChange(async (value) => {
@@ -1560,21 +1813,21 @@ var LocalAgentSettingTab = class extends import_obsidian7.PluginSettingTab {
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian7.Setting(containerEl).setName("Test Connection").setDesc("Verify that the local LLM server is reachable.").addButton(
+    new import_obsidian8.Setting(containerEl).setName("Test Connection").setDesc("Verify that the local LLM server is reachable.").addButton(
       (button) => button.setButtonText("Ping Server").onClick(async () => {
         button.setDisabled(true);
         button.setButtonText("Testing...");
         try {
           const ok = await this.plugin.apiClient.ping();
           if (ok) {
-            new import_obsidian7.Notice("Connection successful \u2014 LLM server is reachable.");
+            new import_obsidian8.Notice("Connection successful \u2014 LLM server is reachable.");
           } else {
-            new import_obsidian7.Notice(
+            new import_obsidian8.Notice(
               "Connection failed \u2014 could not reach the LLM server. Check the endpoint URL."
             );
           }
         } catch (err) {
-          new import_obsidian7.Notice(`Connection error: ${err.message}`);
+          new import_obsidian8.Notice(`Connection error: ${err.message}`);
         } finally {
           button.setDisabled(false);
           button.setButtonText("Ping Server");
@@ -1582,7 +1835,7 @@ var LocalAgentSettingTab = class extends import_obsidian7.PluginSettingTab {
       })
     );
     containerEl.createEl("h2", { text: "Folder Configuration" });
-    new import_obsidian7.Setting(containerEl).setName("Input Folder").setDesc(
+    new import_obsidian8.Setting(containerEl).setName("Input Folder").setDesc(
       "Vault-relative path to the folder containing source notes for aggregation (e.g. Daily Notes)."
     ).addText(
       (text) => text.setPlaceholder("Daily Notes").setValue(this.plugin.settings.inputFolder).onChange(async (value) => {
@@ -1590,7 +1843,7 @@ var LocalAgentSettingTab = class extends import_obsidian7.PluginSettingTab {
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian7.Setting(containerEl).setName("Output Folder").setDesc(
+    new import_obsidian8.Setting(containerEl).setName("Output Folder").setDesc(
       "Vault-relative path to the folder where Insight Reports will be created."
     ).addText(
       (text) => text.setPlaceholder("Insights").setValue(this.plugin.settings.outputFolder).onChange(async (value) => {
@@ -1599,7 +1852,7 @@ var LocalAgentSettingTab = class extends import_obsidian7.PluginSettingTab {
       })
     );
     containerEl.createEl("h2", { text: "Processing Options" });
-    new import_obsidian7.Setting(containerEl).setName("Max Files to Process").setDesc(
+    new import_obsidian8.Setting(containerEl).setName("Max Files to Process").setDesc(
       "Maximum number of recent notes to include in a single Map-Reduce aggregation run."
     ).addSlider(
       (slider) => slider.setLimits(1, 100, 1).setValue(this.plugin.settings.maxFilesToProcess).setDynamicTooltip().onChange(async (value) => {
@@ -1607,7 +1860,7 @@ var LocalAgentSettingTab = class extends import_obsidian7.PluginSettingTab {
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian7.Setting(containerEl).setName("Classification Temperature").setDesc(
+    new import_obsidian8.Setting(containerEl).setName("Classification Temperature").setDesc(
       "LLM temperature for tagging/classification (lower = more deterministic). Range: 0.0 - 1.0."
     ).addSlider(
       (slider) => slider.setLimits(0, 1, 0.05).setValue(this.plugin.settings.classificationTemperature).setDynamicTooltip().onChange(async (value) => {
@@ -1615,7 +1868,7 @@ var LocalAgentSettingTab = class extends import_obsidian7.PluginSettingTab {
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian7.Setting(containerEl).setName("Aggregation Temperature").setDesc(
+    new import_obsidian8.Setting(containerEl).setName("Aggregation Temperature").setDesc(
       "LLM temperature for summary/aggregation tasks (higher = more creative). Range: 0.0 - 1.0."
     ).addSlider(
       (slider) => slider.setLimits(0, 1, 0.05).setValue(this.plugin.settings.aggregationTemperature).setDynamicTooltip().onChange(async (value) => {
@@ -1623,7 +1876,7 @@ var LocalAgentSettingTab = class extends import_obsidian7.PluginSettingTab {
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian7.Setting(containerEl).setName("Refinement Temperature").setDesc(
+    new import_obsidian8.Setting(containerEl).setName("Refinement Temperature").setDesc(
       "LLM temperature for the combined Summary/Highlight/Atomize Refiner task. Default 0.3."
     ).addSlider(
       (slider) => slider.setLimits(0, 1, 0.05).setValue(this.plugin.settings.refinementTemperature).setDynamicTooltip().onChange(async (value) => {
@@ -1650,7 +1903,7 @@ var REDUCE_INSIGHT_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u5206\u6790\u578B\u
 ## \u958B\u653E\u6027\u554F\u984C\u8207\u5F8C\u7E8C\u6B65\u9A5F
 
 \u8ACB\u6DF1\u601D\u719F\u616E\u4E14\u5177\u9AD4\u8AAA\u660E\u3002\u5F15\u7528\u6642\u8ACB\u4F7F\u7528\u6458\u8981\u7DE8\u865F\uFF08\u4F8B\u5982 "[3]"\uFF09\u4F5C\u70BA\u8B49\u64DA\u3002`;
-var LocalAgentPlugin = class extends import_obsidian8.Plugin {
+var LocalAgentPlugin = class extends import_obsidian9.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -1682,9 +1935,13 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
       this.processInboxArticles();
     });
     articleIconEl.addClass("local-agent-article-class");
+    const threadsIconEl = this.addRibbonIcon("message-circle", "\u8655\u7406 Threads \u5E16\u6587\uFF08\u6A19\u984C\u3001\u6458\u8981\u3001\u95DC\u806F\uFF09", (evt) => {
+      this.processThreadsPosts();
+    });
+    threadsIconEl.addClass("local-agent-threads-class");
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
-        if (file instanceof import_obsidian8.TFile && file.extension === "md") {
+        if (file instanceof import_obsidian9.TFile && file.extension === "md") {
           menu.addItem((item) => {
             item.setTitle("CPR \u77E5\u8B58\u6E05\u6383\u8207\u81EA\u6211\u4FEE\u5FA9").setIcon("wrench").onClick(() => {
               this.cleanSpecificNote(file);
@@ -1714,15 +1971,20 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
       callback: () => this.processInboxArticles()
     });
     this.addCommand({
+      id: "process-threads-posts",
+      name: "\u8655\u7406 Threads \u5E16\u6587\uFF08\u6A19\u984C\u3001\u6458\u8981\u3001\u95DC\u806F\uFF09",
+      callback: () => this.processThreadsPosts()
+    });
+    this.addCommand({
       id: "cancel-local-agent-processing",
       name: "\u53D6\u6D88\u76EE\u524D\u8655\u7406\u4EFB\u52D9",
       callback: () => {
         if (this.isProcessing) {
           this.cancelProcessing = true;
-          new import_obsidian8.Notice("\u6B63\u5728\u53D6\u6D88\u80CC\u666F\u4EFB\u52D9...");
+          new import_obsidian9.Notice("\u6B63\u5728\u53D6\u6D88\u80CC\u666F\u4EFB\u52D9...");
           this.setStatusBarText("\u53D6\u6D88\u4E2D...");
         } else {
-          new import_obsidian8.Notice("\u76EE\u524D\u6C92\u6709\u6B63\u5728\u57F7\u884C\u7684\u4EFB\u52D9\u3002");
+          new import_obsidian9.Notice("\u76EE\u524D\u6C92\u6709\u6B63\u5728\u57F7\u884C\u7684\u4EFB\u52D9\u3002");
         }
       }
     });
@@ -1750,11 +2012,11 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
       id: "cpr-clean-note",
       name: "CPR \u77E5\u8B58\u6E05\u6383\u8207\u81EA\u6211\u4FEE\u5FA9\uFF08\u76EE\u524D\u7B46\u8A18\uFF09",
       callback: () => {
-        const activeView = this.app.workspace.getActiveViewOfType(import_obsidian8.MarkdownView);
+        const activeView = this.app.workspace.getActiveViewOfType(import_obsidian9.MarkdownView);
         if (activeView && activeView.file) {
           this.cleanSpecificNote(activeView.file);
         } else {
-          new import_obsidian8.Notice("\u8ACB\u5148\u958B\u555F\u4E00\u7BC7\u7B46\u8A18\u4F86\u9032\u884C\u6E05\u6383\uFF01");
+          new import_obsidian9.Notice("\u8ACB\u5148\u958B\u555F\u4E00\u7BC7\u7B46\u8A18\u4F86\u9032\u884C\u6E05\u6383\uFF01");
         }
       }
     });
@@ -1790,12 +2052,12 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
    */
   async classifyActiveNote() {
     if (this.isProcessing) {
-      new import_obsidian8.Notice("Local Agent is already processing. Please wait.");
+      new import_obsidian9.Notice("Local Agent is already processing. Please wait.");
       return;
     }
-    const activeView = this.app.workspace.getActiveViewOfType(import_obsidian8.MarkdownView);
+    const activeView = this.app.workspace.getActiveViewOfType(import_obsidian9.MarkdownView);
     if (!activeView || !activeView.file) {
-      new import_obsidian8.Notice("No active markdown file to classify.");
+      new import_obsidian9.Notice("No active markdown file to classify.");
       return;
     }
     const file = activeView.file;
@@ -1821,12 +2083,12 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
   // ========================================================================
   async refineActiveNote() {
     if (this.isProcessing) {
-      new import_obsidian8.Notice("Local Agent is already processing. Please wait.");
+      new import_obsidian9.Notice("Local Agent is already processing. Please wait.");
       return;
     }
-    const activeView = this.app.workspace.getActiveViewOfType(import_obsidian8.MarkdownView);
+    const activeView = this.app.workspace.getActiveViewOfType(import_obsidian9.MarkdownView);
     if (!activeView || !activeView.file) {
-      new import_obsidian8.Notice("No active markdown file to refine.");
+      new import_obsidian9.Notice("No active markdown file to refine.");
       return;
     }
     const file = activeView.file;
@@ -1841,7 +2103,7 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
       await engine.refineFile(file);
     } catch (err) {
       console.error("[Local Agent] Refiner error:", err);
-      new import_obsidian8.Notice(`Refinement failed: ${err.message}`);
+      new import_obsidian9.Notice(`Refinement failed: ${err.message}`);
     } finally {
       this.isProcessing = false;
       this.setStatusBarText("");
@@ -1852,7 +2114,7 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
   // ========================================================================
   async processInboxArticles() {
     if (this.isProcessing) {
-      new import_obsidian8.Notice("Local Agent is already processing. Please wait or use Cancel command.");
+      new import_obsidian9.Notice("Local Agent is already processing. Please wait or use Cancel command.");
       return;
     }
     this.isProcessing = true;
@@ -1861,10 +2123,10 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
     try {
       const files = await this.getRecentMarkdownFiles("00_Inbox", 999);
       if (files.length === 0) {
-        new import_obsidian8.Notice("No markdown files found in '00_Inbox'.");
+        new import_obsidian9.Notice("No markdown files found in '00_Inbox'.");
         return;
       }
-      new import_obsidian8.Notice(`Found ${files.length} notes in 00_Inbox. Starting batch process...`);
+      new import_obsidian9.Notice(`Found ${files.length} notes in 00_Inbox. Starting batch process...`);
       const engine = new ArticleProcessorEngine(
         this.app,
         this.apiClient,
@@ -1873,7 +2135,7 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
       let processedCount = 0;
       for (let i = 0; i < files.length; i++) {
         if (this.cancelProcessing) {
-          new import_obsidian8.Notice("Batch processing was cancelled by user.");
+          new import_obsidian9.Notice("Batch processing was cancelled by user.");
           break;
         }
         const file = files[i];
@@ -1886,15 +2148,15 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
           }
           await engine.processFile(file);
           processedCount++;
-          new import_obsidian8.Notice(`Processed (${processedCount}/${files.length}): ${file.basename}`);
+          new import_obsidian9.Notice(`Processed (${processedCount}/${files.length}): ${file.basename}`);
         } catch (err) {
           console.error(`[Local Agent] Failed to process ${file.basename}:`, err);
         }
       }
-      new import_obsidian8.Notice(`Batch Processing completed or stopped. Processed ${processedCount}/${files.length} notes.`);
+      new import_obsidian9.Notice(`Batch Processing completed or stopped. Processed ${processedCount}/${files.length} notes.`);
     } catch (err) {
       console.error("[Local Agent] Batch Article Processor error:", err);
-      new import_obsidian8.Notice(`Batch Processing failed: ${err.message}`);
+      new import_obsidian9.Notice(`Batch Processing failed: ${err.message}`);
     } finally {
       this.isProcessing = false;
       this.cancelProcessing = false;
@@ -1906,7 +2168,7 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
   // ========================================================================
   async cleanSpecificNote(file) {
     if (this.isProcessing) {
-      new import_obsidian8.Notice("Local Agent \u6B63\u5728\u57F7\u884C\u5176\u4ED6\u4EFB\u52D9\uFF0C\u8ACB\u7A0D\u5019\u3002");
+      new import_obsidian9.Notice("Local Agent \u6B63\u5728\u57F7\u884C\u5176\u4ED6\u4EFB\u52D9\uFF0C\u8ACB\u7A0D\u5019\u3002");
       return;
     }
     this.isProcessing = true;
@@ -1920,9 +2182,47 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
       await engine.cleanFile(file);
     } catch (err) {
       console.error("[Local Agent] Cleaner error:", err);
-      new import_obsidian8.Notice(`\u6E05\u6383\u5931\u6557\uFF1A${err.message}`);
+      new import_obsidian9.Notice(`\u6E05\u6383\u5931\u6557\uFF1A${err.message}`);
     } finally {
       this.isProcessing = false;
+      this.setStatusBarText("");
+    }
+  }
+  // ========================================================================
+  // MODULE 8 — Threads Post Processor
+  // ========================================================================
+  async processThreadsPosts() {
+    if (this.isProcessing) {
+      new import_obsidian9.Notice("Local Agent \u6B63\u5728\u57F7\u884C\u5176\u4ED6\u4EFB\u52D9\uFF0C\u8ACB\u7A0D\u5019\u3002");
+      return;
+    }
+    this.isProcessing = true;
+    this.cancelProcessing = false;
+    this.setStatusBarText("Batch Processing Threads Posts...");
+    try {
+      const engine = new ThreadsProcessorEngine(
+        this.app,
+        this.apiClient,
+        this.settings.refinementTemperature
+      );
+      const processedCount = await engine.processBatch(
+        "Threads",
+        (current, total, name) => {
+          this.setStatusBarText(
+            `Processing Thread ${current}/${total}: ${name}...`
+          );
+        },
+        () => this.cancelProcessing
+      );
+      new import_obsidian9.Notice(
+        `Threads \u6279\u6B21\u8655\u7406\u5B8C\u6210\uFF01\u5DF2\u8655\u7406 ${processedCount} \u7BC7\u5E16\u6587\u3002`
+      );
+    } catch (err) {
+      console.error("[Local Agent] Threads Processor error:", err);
+      new import_obsidian9.Notice(`Threads \u8655\u7406\u5931\u6557\uFF1A${err.message}`);
+    } finally {
+      this.isProcessing = false;
+      this.cancelProcessing = false;
       this.setStatusBarText("");
     }
   }
@@ -1932,7 +2232,7 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
   async handleWriterInit() {
     new TopicInputModal(this.app, async (topic) => {
       if (!topic) {
-        new import_obsidian8.Notice("\u672A\u8F38\u5165\u5BEB\u4F5C\u76EE\u6A19\uFF0C\u5DF2\u53D6\u6D88\u8A08\u756B\u5EFA\u7ACB\u3002");
+        new import_obsidian9.Notice("\u672A\u8F38\u5165\u5BEB\u4F5C\u76EE\u6A19\uFF0C\u5DF2\u53D6\u6D88\u8A08\u756B\u5EFA\u7ACB\u3002");
         return;
       }
       const engine = new WriterEngine(this.app, this.apiClient, this.settings.refinementTemperature);
@@ -1942,12 +2242,12 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
   }
   async handleWriterAction(action) {
     if (this.isProcessing) {
-      new import_obsidian8.Notice("Local Agent is already processing. Please wait or use Cancel command.");
+      new import_obsidian9.Notice("Local Agent is already processing. Please wait or use Cancel command.");
       return;
     }
-    const activeView = this.app.workspace.getActiveViewOfType(import_obsidian8.MarkdownView);
+    const activeView = this.app.workspace.getActiveViewOfType(import_obsidian9.MarkdownView);
     if (!activeView || !activeView.file) {
-      new import_obsidian8.Notice("Please open a plan.md or draft.md to perform this action.");
+      new import_obsidian9.Notice("Please open a plan.md or draft.md to perform this action.");
       return;
     }
     this.isProcessing = true;
@@ -1979,7 +2279,7 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
    */
   async runMapReduce() {
     if (this.isProcessing) {
-      new import_obsidian8.Notice("Local Agent is already processing. Please wait.");
+      new import_obsidian9.Notice("Local Agent is already processing. Please wait.");
       return;
     }
     this.isProcessing = true;
@@ -1990,12 +2290,12 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
         this.settings.maxFilesToProcess
       );
       if (files.length === 0) {
-        new import_obsidian8.Notice(
+        new import_obsidian9.Notice(
           `No markdown files found in "${this.settings.inputFolder}".`
         );
         return;
       }
-      new import_obsidian8.Notice(
+      new import_obsidian9.Notice(
         `Starting Map-Reduce on ${files.length} note(s) from "${this.settings.inputFolder}"...`
       );
       const summaries = [];
@@ -2051,13 +2351,13 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
         insightReport,
         summaries
       );
-      new import_obsidian8.Notice(
+      new import_obsidian9.Notice(
         `Insight Report created: "${reportFile.basename}"`
       );
       await this.app.workspace.getLeaf(false).openFile(reportFile);
     } catch (err) {
       console.error("[Local Agent] Map-Reduce error:", err);
-      new import_obsidian8.Notice(`Map-Reduce failed: ${err.message}`);
+      new import_obsidian9.Notice(`Map-Reduce failed: ${err.message}`);
     } finally {
       this.isProcessing = false;
       this.setStatusBarText("");
@@ -2069,19 +2369,19 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
    * Sorted by modification time (newest first), limited by `maxFiles`.
    */
   async getRecentMarkdownFiles(folderPath, maxFiles) {
-    const normalised = (0, import_obsidian8.normalizePath)(folderPath);
+    const normalised = (0, import_obsidian9.normalizePath)(folderPath);
     const abstractFile = this.app.vault.getAbstractFileByPath(normalised);
-    if (!abstractFile || !(abstractFile instanceof import_obsidian8.TFolder)) {
-      new import_obsidian8.Notice(`Folder not found: "${folderPath}". Check your settings.`);
+    if (!abstractFile || !(abstractFile instanceof import_obsidian9.TFolder)) {
+      new import_obsidian9.Notice(`Folder not found: "${folderPath}". Check your settings.`);
       return [];
     }
     const folder = abstractFile;
     const markdownFiles = [];
     const collectFiles = (f) => {
       for (const child of f.children) {
-        if (child instanceof import_obsidian8.TFile && child.extension === "md") {
+        if (child instanceof import_obsidian9.TFile && child.extension === "md") {
           markdownFiles.push(child);
-        } else if (child instanceof import_obsidian8.TFolder) {
+        } else if (child instanceof import_obsidian9.TFolder) {
           collectFiles(child);
         }
       }
@@ -2095,7 +2395,7 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
    * The filename includes a timestamp to guarantee uniqueness.
    */
   async createInsightReport(reportContent, summaries) {
-    const outputPath = (0, import_obsidian8.normalizePath)(this.settings.outputFolder);
+    const outputPath = (0, import_obsidian9.normalizePath)(this.settings.outputFolder);
     const existingFolder = this.app.vault.getAbstractFileByPath(outputPath);
     if (!existingFolder) {
       await this.app.vault.createFolder(outputPath);
@@ -2104,7 +2404,7 @@ var LocalAgentPlugin = class extends import_obsidian8.Plugin {
     const dateStr = now.toISOString().split("T")[0];
     const timeStr = now.toISOString().split("T")[1].replace(/:/g, "").substring(0, 6);
     const fileName = `Insight Report ${dateStr} ${timeStr}.md`;
-    const filePath = (0, import_obsidian8.normalizePath)(`${outputPath}/${fileName}`);
+    const filePath = (0, import_obsidian9.normalizePath)(`${outputPath}/${fileName}`);
     const sourceList = summaries.map((s) => `${s.index}. **${s.name}**: ${s.summary}`).join("\n");
     const fullReport = [
       "---",

@@ -27,6 +27,7 @@ import { LocalLLMClient, parseJsonFromLLM } from "./api";
 import { ClassificationEngine } from "./classifier";
 import { NoteRefinerEngine } from "./refiner";
 import { ArticleProcessorEngine } from "./articleProcessor";
+import { ThreadsProcessorEngine } from "./threadsProcessor";
 import { WriterEngine, TopicInputModal } from "./writer";
 import { CleanerEngine } from "./cleaner";
 import {
@@ -104,6 +105,12 @@ export default class LocalAgentPlugin extends Plugin {
     });
     articleIconEl.addClass('local-agent-article-class');
 
+    // Add Ribbon Icon for the Threads Processor
+    const threadsIconEl = this.addRibbonIcon('message-circle', '處理 Threads 帖文（標題、摘要、關聯）', (evt: MouseEvent) => {
+      this.processThreadsPosts();
+    });
+    threadsIconEl.addClass('local-agent-threads-class');
+
     // Add Context Menu: Right-Click on File in File Explorer
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
@@ -148,6 +155,13 @@ export default class LocalAgentPlugin extends Plugin {
       id: "process-inbox-articles",
       name: "處理收件箱文章（批次格式化，含原子化）",
       callback: () => this.processInboxArticles(),
+    });
+
+    // Module 8: Threads Processor
+    this.addCommand({
+      id: "process-threads-posts",
+      name: "處理 Threads 帖文（標題、摘要、關聯）",
+      callback: () => this.processThreadsPosts(),
     });
 
     // Cancel Processing
@@ -405,6 +419,50 @@ export default class LocalAgentPlugin extends Plugin {
       new Notice(`清掃失敗：${(err as Error).message}`);
     } finally {
       this.isProcessing = false;
+      this.setStatusBarText("");
+    }
+  }
+
+  // ========================================================================
+  // MODULE 8 — Threads Post Processor
+  // ========================================================================
+
+  private async processThreadsPosts(): Promise<void> {
+    if (this.isProcessing) {
+      new Notice("Local Agent 正在執行其他任務，請稍候。");
+      return;
+    }
+
+    this.isProcessing = true;
+    this.cancelProcessing = false;
+    this.setStatusBarText("Batch Processing Threads Posts...");
+
+    try {
+      const engine = new ThreadsProcessorEngine(
+        this.app,
+        this.apiClient,
+        this.settings.refinementTemperature
+      );
+
+      const processedCount = await engine.processBatch(
+        "Threads",
+        (current, total, name) => {
+          this.setStatusBarText(
+            `Processing Thread ${current}/${total}: ${name}...`
+          );
+        },
+        () => this.cancelProcessing
+      );
+
+      new Notice(
+        `Threads 批次處理完成！已處理 ${processedCount} 篇帖文。`
+      );
+    } catch (err) {
+      console.error("[Local Agent] Threads Processor error:", err);
+      new Notice(`Threads 處理失敗：${(err as Error).message}`);
+    } finally {
+      this.isProcessing = false;
+      this.cancelProcessing = false;
       this.setStatusBarText("");
     }
   }
