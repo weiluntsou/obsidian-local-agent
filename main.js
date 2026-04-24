@@ -1118,7 +1118,7 @@ var THREADS_PROCESSOR_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u7CBE\u6E96\u7684 Obsid
   "new_hubs": [
     {
       "name": "\u65B0\u4E3B\u984C\u9801\u540D\u7A31",
-      "description": "2~3\u53E5\u8A71\u63CF\u8FF0\u9019\u500B\u4E3B\u984C\u9801\u7684\u6DB5\u84CB\u7BC4\u570D\uFF0C\u8B93\u672A\u4F86\u7684\u7B46\u8A18\u4E5F\u80FD\u9023\u7D50\u904E\u4F86",
+      "description": "2~3\u53E5\u8A71\u63CF\u8FF0\u9019\u500B\u4E3B\u984C\u9801\u7684\u6DB5\u84CB\u7BC4\u570D",
       "category": "30_\u751F\u6D3B\u8207\u5275\u4F5C"
     }
   ]
@@ -1137,25 +1137,30 @@ var THREADS_PROCESSOR_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u7CBE\u6E96\u7684 Obsid
 - \u98DF\u8A18\u9EDE\u51FA\u8A55\u50F9\u3001\u5F71\u8A55\u9EDE\u51FA\u7D50\u8AD6\u3001\u6280\u8853\u6587\u9EDE\u51FA\u6838\u5FC3\u89C0\u9EDE
 
 ## existing_relations \u898F\u5247\uFF08\u6700\u91CD\u8981\uFF01\uFF09
-- \u5F9E\u300C\u73FE\u6709\u9801\u9762\u6E05\u55AE\u300D\u4E2D\u6311\u9078 **1 \u5230 5 \u500B**\u8207\u5167\u6587\u4E3B\u984C\u76F8\u95DC\u7684\u9801\u9762
-- **\u8ACB\u7528\u300C\u4E3B\u984C\u95DC\u806F\u6027\u300D\u5224\u65B7**\uFF0C\u800C\u975E\u9010\u5B57\u6BD4\u5C0D\u3002\u4F8B\u5982\uFF1A
-  - \u5F71\u8A55 \u2192 \u9023\u7D50\u5230\u300C\u89C0\u5F71\u5FC3\u5F97\u300D\u3001\u5176\u4ED6\u76F8\u540C\u5C0E\u6F14/\u6F14\u54E1\u7684\u5F71\u8A55\u7B46\u8A18
-  - \u98DF\u8A18 \u2192 \u9023\u7D50\u5230\u300C\u963F\u7434\u9EBB\u8FA3\u98A8\u5473\u300D\uFF08\u540C\u70BA\u98DF\u8A18\uFF09\u3001\u300C\u8349\u5C6F\u7F8E\u98DF\u300D\u7B49
-  - \u66F8\u8A55 \u2192 \u9023\u7D50\u5230\u300C\u8B80\u66F8\u5FC3\u5F97\u300D\u3001\u540C\u4E3B\u984C\u7684\u7B46\u8A18
-  - \u6280\u8853\u6587 \u2192 \u9023\u7D50\u5230\u540C\u9818\u57DF\u7684\u6280\u8853\u7B46\u8A18
-  - \u751F\u6D3B\u611F\u60F3 \u2192 \u9023\u7D50\u5230\u300C\u5FC3\u7406\u5B78\u8207\u500B\u4EBA\u6210\u9577\u300D\u76F8\u95DC\u7B46\u8A18
-  - \u65E5\u6587\u5B78\u7FD2 \u2192 \u9023\u7D50\u5230\u76F8\u95DC\u5B78\u7FD2\u7B46\u8A18
-- **\u56DE\u50B3\u7684\u662F\u9801\u9762\u7684 basename**\uFF08\u4E0D\u542B\u8DEF\u5F91\uFF09\uFF0C\u4F8B\u5982 "\u89C0\u5F71\u5FC3\u5F97" \u800C\u975E "30_Life_&_Creations/\u89C0\u5F71\u5FC3\u5F97"
-- **\u76E1\u91CF\u627E\u5230\u81F3\u5C11 1 \u500B**\uFF0C\u53EA\u6709\u5728\u6E05\u55AE\u4E2D\u5B8C\u5168\u6C92\u6709\u4EFB\u4F55\u6CBE\u5F97\u4E0A\u908A\u7684\u9801\u9762\u6642\u624D\u5141\u8A31\u7A7A\u9663\u5217
 
-## new_hubs \u898F\u5247\uFF08\u6E1B\u5C11\u5B64\u7ACB\u7B46\u8A18\u7684\u95DC\u9375\uFF01\uFF09
-- \u7576 existing_relations \u627E\u5230\u7684\u9801\u9762\u4E0D\u8DB3 2 \u500B\u6642\uFF0C**\u5FC5\u9808\u5EFA\u8B70 1 \u500B\u65B0\u7684\u4E3B\u984C\u9801**
-- \u65B0\u4E3B\u984C\u9801\u7684\u540D\u7A31\u61C9\u8A72\u662F\u4E00\u500B\u300C\u53EF\u4EE5\u6536\u96C6\u540C\u985E\u672A\u4F86\u7B46\u8A18\u300D\u7684\u901A\u7528\u4E3B\u984C\uFF0C\u4F8B\u5982\uFF1A
-  - \u4E00\u7BC7\u8349\u5C6F\u98DF\u8A18 \u2192 \u5EFA\u8B70\u300C\u8349\u5C6F\u7F8E\u98DF\u5730\u5716\u300D
-  - \u4E00\u7BC7\u5F71\u8A55 \u2192 \u82E5\u300C\u89C0\u5F71\u5FC3\u5F97\u300D\u5DF2\u5B58\u5728\u5C31\u4E0D\u7528\u518D\u5EFA\uFF0C\u6539\u9023\u7D50\u904E\u53BB
-  - \u4E00\u7BC7 AI \u5DE5\u5177\u4F7F\u7528\u5FC3\u5F97 \u2192 \u5EFA\u8B70\u300CAI \u5DE5\u5177\u5BE6\u6230\u7B46\u8A18\u300D
-  - \u4E00\u7BC7\u80B2\u5152\u65E5\u5E38 \u2192 \u5EFA\u8B70\u300C\u89AA\u5B50\u751F\u6D3B\u8A18\u9304\u300D
-  - \u4E00\u7BC7\u65C5\u904A \u2192 \u5EFA\u8B70\u300C\u65C5\u884C\u898B\u805E\u300D
+### \u512A\u5148\u9806\u5E8F\uFF1A\u4E3B\u984C\u9801\uFF08Hub\uFF09> \u7E3D\u89BD\u9801 > \u500B\u5225\u7B46\u8A18
+\u9801\u9762\u6E05\u55AE\u4E2D\u6A19\u8A18\u70BA [hub] \u7684\u9801\u9762\u662F\u300C\u4E3B\u984C\u9801\u300D\uFF0C\u5B83\u5011\u662F\u540C\u985E\u7B46\u8A18\u7684\u9023\u7D50\u4E2D\u5FC3\u3002
+**\u5982\u679C\u4E00\u500B [hub] \u4E3B\u984C\u9801\u6DB5\u84CB\u4E86\u9019\u7BC7\u5E16\u6587\u7684\u4E3B\u984C\uFF0C\u4F60\u5FC5\u9808\u512A\u5148\u9023\u7D50\u5B83\uFF0C\u800C\u975E\u500B\u5225\u7B46\u8A18\u3002**
+
+\u4F8B\u5982\uFF1A
+- \u98DF\u8A18\u5E16\u6587 \u2192 \u82E5\u6709\u300C\u7F8E\u98DF\u63A2\u5E97\u5730\u5716 [hub]\u300D\u5C31\u9023\u7D50\u5B83\uFF0C\u4E0D\u8981\u9023\u7D50\u5176\u4ED6\u500B\u5225\u7684\u98DF\u8A18\u7B46\u8A18
+- \u5F71\u8A55\u5E16\u6587 \u2192 \u82E5\u6709\u300C\u89C0\u5F71\u5FC3\u5F97\u300D\u6216\u300C\u5F71\u8996\u89C0\u5F8C\u611F [hub]\u300D\u5C31\u9023\u7D50\u5B83
+- \u66F8\u8A55\u5E16\u6587 \u2192 \u9023\u7D50\u300C\u8B80\u66F8\u5FC3\u5F97\u300D\u76F8\u95DC\u7684\u7E3D\u89BD\u9801
+
+### \u7981\u6B62\u884C\u70BA
+- **\u56B4\u7981**\u628A\u67D0\u4E00\u7BC7\u500B\u5225\u98DF\u8A18/\u5F71\u8A55/\u66F8\u8A55\u7B46\u8A18\u7576\u6210\u300C\u6240\u6709\u540C\u985E\u5E16\u6587\u7684\u842C\u7528\u9023\u7D50\u300D
+- \u500B\u5225\u7B46\u8A18\u53EA\u5728\u300C\u5167\u5BB9\u4E0A\u76F4\u63A5\u9AD8\u5EA6\u76F8\u95DC\u300D\u6642\u624D\u9023\u7D50\uFF08\u4F8B\u5982\uFF1A\u540C\u4E00\u90E8\u96FB\u5F71\u7684\u4E0D\u540C\u8A55\u8AD6\u3001\u540C\u4E00\u9593\u9910\u5EF3\u7684\u4E0D\u540C\u8A18\u9304\uFF09
+
+### \u5176\u4ED6\u898F\u5247
+- \u5F9E\u6E05\u55AE\u4E2D\u6311\u9078 **1 \u5230 5 \u500B**\u76F8\u95DC\u9801\u9762
+- \u56DE\u50B3\u7684\u662F\u9801\u9762\u7684 basename\uFF08\u4E0D\u542B\u8DEF\u5F91\u524D\u7DB4\uFF09
+- \u76E1\u91CF\u627E\u5230\u81F3\u5C11 1 \u500B\uFF0C\u53EA\u6709\u5728\u6E05\u55AE\u4E2D\u5B8C\u5168\u6C92\u6709\u4EFB\u4F55\u6CBE\u5F97\u4E0A\u908A\u7684\u9801\u9762\u6642\u624D\u5141\u8A31\u7A7A\u9663\u5217
+
+## new_hubs \u898F\u5247
+- \u7576 existing_relations \u4E2D\u6C92\u6709\u4EFB\u4F55 [hub] \u4E3B\u984C\u9801\u6642\uFF0C\u624D\u9700\u8981\u5EFA\u8B70\u65B0\u7684\u4E3B\u984C\u9801
+- **\u5148\u5728\u6E05\u55AE\u4E2D\u4ED4\u7D30\u641C\u5C0B\u662F\u5426\u5DF2\u6709\u529F\u80FD\u7B49\u50F9\u7684\u4E3B\u984C\u9801**\uFF0C\u82E5\u5DF2\u5B58\u5728\uFF0C\u76F4\u63A5\u9023\u7D50\u5B83\u5373\u53EF
+- \u529F\u80FD\u7B49\u50F9\u7684\u5224\u65B7\uFF1A\u300C\u7F8E\u98DF\u63A2\u5E97\u5730\u5716\u300D=\u300C\u5728\u5730\u7F8E\u98DF\u5730\u5716\u300D=\u300C\u53F0\u7063\u7F8E\u98DF\u5730\u5716\u300D=\u300C\u8349\u5C6F\u5728\u5730\u7F8E\u98DF\u5730\u5716\u300D\uFF0C\u9019\u4E9B\u90FD\u662F\u540C\u4E00\u500B\u6982\u5FF5\uFF0C\u4E0D\u53EF\u91CD\u8907\u5EFA\u7ACB
+- \u540C\u4E00\u500B\u4E3B\u984C\u53EA\u5141\u8A31\u5B58\u5728\u4E00\u500B hub \u9801\uFF0C\u82E5\u5DF2\u6709\u5C31\u628A\u5B83\u653E\u5165 existing_relations
 - name: \u7E41\u9AD4\u4E2D\u6587\uFF0C\u7C21\u6F54\u660E\u78BA\uFF086~12 \u5B57\uFF09
 - description: 2~3 \u53E5\u8A71\u63CF\u8FF0\u6DB5\u84CB\u7BC4\u570D
 - category: \u5FC5\u9808\u662F\u4EE5\u4E0B\u4E94\u500B\u4E4B\u4E00\uFF1A
@@ -1164,8 +1169,7 @@ var THREADS_PROCESSOR_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u7CBE\u6E96\u7684 Obsid
   - "30_\u751F\u6D3B\u8207\u5275\u4F5C"
   - "40_\u81EA\u8A17\u7BA1\u5BE6\u9A57\u5BA4"
   - "99_\u672A\u5206\u985E"
-- \u82E5 existing_relations \u5DF2\u6709 2 \u500B\u4EE5\u4E0A\u7684\u826F\u597D\u5339\u914D\uFF0Cnew_hubs \u53EF\u4EE5\u662F\u7A7A\u9663\u5217 []
-- **\u91CD\u8907\u6AA2\u67E5**\uFF1A\u82E5\u6E05\u55AE\u4E2D\u5DF2\u6709\u529F\u80FD\u76F8\u540C\u7684\u9801\u9762\uFF08\u5982\u5DF2\u6709\u300C\u89C0\u5F71\u5FC3\u5F97\u300D\u5C31\u4E0D\u518D\u5EFA\u300C\u96FB\u5F71\u5FC3\u5F97\u300D\uFF09\uFF0C\u4E0D\u8981\u5EFA\u7ACB\u91CD\u8907\u4E3B\u984C`;
+- \u82E5 existing_relations \u5DF2\u6709\u5408\u9069\u7684 [hub] \u9801\uFF0Cnew_hubs \u5FC5\u9808\u662F\u7A7A\u9663\u5217 []`;
 var VALID_CATEGORIES = [
   "10_\u5DE5\u4F5C\u8207\u7BA1\u7406",
   "20_\u5B78\u8853\u8207\u96FB\u8166\u79D1\u5B78",
@@ -1193,7 +1197,7 @@ var ThreadsProcessorEngine = class {
       return 0;
     }
     new import_obsidian5.Notice(`\u627E\u5230 ${files.length} \u7BC7 Threads \u5E16\u6587\uFF0C\u958B\u59CB\u6279\u6B21\u8655\u7406...`);
-    const { grouped, allBasenames } = this.collectVaultPages(folderPath);
+    const allBasenames = this.collectAllBasenames(folderPath);
     let processedCount = 0;
     for (let i = 0; i < files.length; i++) {
       if (shouldCancel == null ? void 0 : shouldCancel()) {
@@ -1210,7 +1214,8 @@ var ThreadsProcessorEngine = class {
           );
           continue;
         }
-        await this.processFile(file, content, grouped, allBasenames);
+        const groupedPages = this.buildGroupedPageList(folderPath);
+        await this.processFile(file, content, groupedPages, allBasenames);
         processedCount++;
       } catch (err) {
         console.error(
@@ -1289,6 +1294,14 @@ ${summary.trim()}
         if (!safeName) continue;
         if (allBasenames.has(safeName) || this.createdHubsThisBatch.has(safeName)) {
           hubNames.push(safeName);
+          continue;
+        }
+        const existingDuplicate = this.findDuplicateHub(safeName, allBasenames);
+        if (existingDuplicate) {
+          console.log(
+            `[ThreadsProcessor] Hub "${safeName}" is a duplicate of "${existingDuplicate}", reusing.`
+          );
+          hubNames.push(existingDuplicate);
           continue;
         }
         try {
@@ -1412,6 +1425,39 @@ ${summary.trim()}
   tokenize(str) {
     return str.toLowerCase().split(/[\s\-_：:，,、。.()（）《》「」\[\]\/]+/).filter((t) => t.length >= 2);
   }
+  // ---- Hub Deduplication -----------------------------------------------------
+  /**
+   * Check if a proposed hub name is a near-duplicate of an existing page.
+   * Uses keyword overlap to catch variants like:
+   *   "美食探店地圖" ≈ "在地美食地圖" ≈ "草屯在地美食地圖"
+   *
+   * Returns the existing page basename if a duplicate is found, null otherwise.
+   */
+  findDuplicateHub(proposed, allBasenames) {
+    const proposedTokens = this.tokenize(proposed);
+    if (proposedTokens.length === 0) return null;
+    let bestMatch = null;
+    let bestScore = 0;
+    for (const existing of allBasenames) {
+      const existingTokens = this.tokenize(existing);
+      if (existingTokens.length === 0) continue;
+      let matchingTokens = 0;
+      for (const pt of proposedTokens) {
+        for (const et of existingTokens) {
+          if (pt === et || pt.includes(et) || et.includes(pt)) {
+            matchingTokens++;
+            break;
+          }
+        }
+      }
+      const ratio = matchingTokens / proposedTokens.length;
+      if (matchingTokens >= 2 && ratio >= 0.5 && matchingTokens > bestScore) {
+        bestScore = matchingTokens;
+        bestMatch = existing;
+      }
+    }
+    return bestMatch;
+  }
   // ---- Hub Page Creation ----------------------------------------------------
   /**
    * Create a new thematic hub page in the appropriate category folder.
@@ -1461,26 +1507,57 @@ ${summary.trim()}
   }
   // ---- Vault Page Collection ------------------------------------------------
   /**
-   * Collect all vault pages grouped by their parent folder.
-   * Returns both a formatted string for the prompt and a Set of basenames.
+   * Collect all vault page basenames (excluding target folder, checkpoints, etc.).
+   * Returns a mutable Set that will be updated as hubs are created.
    */
-  collectVaultPages(excludeFolder) {
-    var _a;
+  collectAllBasenames(excludeFolder) {
     const allFiles = this.app.vault.getMarkdownFiles();
     const excludeNorm = (0, import_obsidian5.normalizePath)(excludeFolder).toLowerCase();
-    const folderMap = /* @__PURE__ */ new Map();
-    const allBasenames = /* @__PURE__ */ new Set();
+    const basenames = /* @__PURE__ */ new Set();
     for (const f of allFiles) {
       const pathLower = f.path.toLowerCase();
       if (pathLower.startsWith(excludeNorm) || pathLower.startsWith("_checkpoints") || pathLower.includes(".obsidian") || pathLower.startsWith("copilot-custom-prompts") || pathLower.startsWith("00_inbox")) {
         continue;
       }
-      allBasenames.add(f.basename);
+      basenames.add(f.basename);
+    }
+    return basenames;
+  }
+  /**
+   * Build the grouped page list string for the LLM prompt.
+   * Called per-file so it always includes newly created hub pages.
+   * Hub pages are annotated with [hub] so the LLM knows to prefer them.
+   */
+  buildGroupedPageList(excludeFolder) {
+    var _a, _b, _c;
+    const allFiles = this.app.vault.getMarkdownFiles();
+    const excludeNorm = (0, import_obsidian5.normalizePath)(excludeFolder).toLowerCase();
+    const folderMap = /* @__PURE__ */ new Map();
+    for (const f of allFiles) {
+      const pathLower = f.path.toLowerCase();
+      if (pathLower.startsWith(excludeNorm) || pathLower.startsWith("_checkpoints") || pathLower.includes(".obsidian") || pathLower.startsWith("copilot-custom-prompts") || pathLower.startsWith("00_inbox")) {
+        continue;
+      }
       const folder = ((_a = f.parent) == null ? void 0 : _a.path) || "(root)";
       if (!folderMap.has(folder)) {
         folderMap.set(folder, []);
       }
-      folderMap.get(folder).push(f.basename);
+      const isHub = this.createdHubsThisBatch.has(f.basename);
+      const label = isHub ? `${f.basename} [hub]` : f.basename;
+      folderMap.get(folder).push(label);
+    }
+    for (const f of allFiles) {
+      const cache = this.app.metadataCache.getFileCache(f);
+      if (((_b = cache == null ? void 0 : cache.frontmatter) == null ? void 0 : _b.type) === "hub") {
+        const folder = ((_c = f.parent) == null ? void 0 : _c.path) || "(root)";
+        const entries = folderMap.get(folder);
+        if (entries) {
+          const idx = entries.indexOf(f.basename);
+          if (idx !== -1) {
+            entries[idx] = `${f.basename} [hub]`;
+          }
+        }
+      }
     }
     const lines = [];
     const sortedFolders = Array.from(folderMap.keys()).sort();
@@ -1492,10 +1569,7 @@ ${summary.trim()}
         lines.push(`  - ${page}`);
       }
     }
-    return {
-      grouped: lines.join("\n"),
-      allBasenames
-    };
+    return lines.join("\n");
   }
   // ---- File Helpers ---------------------------------------------------------
   /**

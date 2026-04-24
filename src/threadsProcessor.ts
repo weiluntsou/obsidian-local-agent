@@ -49,7 +49,7 @@ const THREADS_PROCESSOR_PROMPT = `你是一位精準的 Obsidian 知識管理助
   "new_hubs": [
     {
       "name": "新主題頁名稱",
-      "description": "2~3句話描述這個主題頁的涵蓋範圍，讓未來的筆記也能連結過來",
+      "description": "2~3句話描述這個主題頁的涵蓋範圍",
       "category": "30_生活與創作"
     }
   ]
@@ -68,25 +68,30 @@ const THREADS_PROCESSOR_PROMPT = `你是一位精準的 Obsidian 知識管理助
 - 食記點出評價、影評點出結論、技術文點出核心觀點
 
 ## existing_relations 規則（最重要！）
-- 從「現有頁面清單」中挑選 **1 到 5 個**與內文主題相關的頁面
-- **請用「主題關聯性」判斷**，而非逐字比對。例如：
-  - 影評 → 連結到「觀影心得」、其他相同導演/演員的影評筆記
-  - 食記 → 連結到「阿琴麻辣風味」（同為食記）、「草屯美食」等
-  - 書評 → 連結到「讀書心得」、同主題的筆記
-  - 技術文 → 連結到同領域的技術筆記
-  - 生活感想 → 連結到「心理學與個人成長」相關筆記
-  - 日文學習 → 連結到相關學習筆記
-- **回傳的是頁面的 basename**（不含路徑），例如 "觀影心得" 而非 "30_Life_&_Creations/觀影心得"
-- **盡量找到至少 1 個**，只有在清單中完全沒有任何沾得上邊的頁面時才允許空陣列
 
-## new_hubs 規則（減少孤立筆記的關鍵！）
-- 當 existing_relations 找到的頁面不足 2 個時，**必須建議 1 個新的主題頁**
-- 新主題頁的名稱應該是一個「可以收集同類未來筆記」的通用主題，例如：
-  - 一篇草屯食記 → 建議「草屯美食地圖」
-  - 一篇影評 → 若「觀影心得」已存在就不用再建，改連結過去
-  - 一篇 AI 工具使用心得 → 建議「AI 工具實戰筆記」
-  - 一篇育兒日常 → 建議「親子生活記錄」
-  - 一篇旅遊 → 建議「旅行見聞」
+### 優先順序：主題頁（Hub）> 總覽頁 > 個別筆記
+頁面清單中標記為 [hub] 的頁面是「主題頁」，它們是同類筆記的連結中心。
+**如果一個 [hub] 主題頁涵蓋了這篇帖文的主題，你必須優先連結它，而非個別筆記。**
+
+例如：
+- 食記帖文 → 若有「美食探店地圖 [hub]」就連結它，不要連結其他個別的食記筆記
+- 影評帖文 → 若有「觀影心得」或「影視觀後感 [hub]」就連結它
+- 書評帖文 → 連結「讀書心得」相關的總覽頁
+
+### 禁止行為
+- **嚴禁**把某一篇個別食記/影評/書評筆記當成「所有同類帖文的萬用連結」
+- 個別筆記只在「內容上直接高度相關」時才連結（例如：同一部電影的不同評論、同一間餐廳的不同記錄）
+
+### 其他規則
+- 從清單中挑選 **1 到 5 個**相關頁面
+- 回傳的是頁面的 basename（不含路徑前綴）
+- 盡量找到至少 1 個，只有在清單中完全沒有任何沾得上邊的頁面時才允許空陣列
+
+## new_hubs 規則
+- 當 existing_relations 中沒有任何 [hub] 主題頁時，才需要建議新的主題頁
+- **先在清單中仔細搜尋是否已有功能等價的主題頁**，若已存在，直接連結它即可
+- 功能等價的判斷：「美食探店地圖」=「在地美食地圖」=「台灣美食地圖」=「草屯在地美食地圖」，這些都是同一個概念，不可重複建立
+- 同一個主題只允許存在一個 hub 頁，若已有就把它放入 existing_relations
 - name: 繁體中文，簡潔明確（6~12 字）
 - description: 2~3 句話描述涵蓋範圍
 - category: 必須是以下五個之一：
@@ -95,8 +100,7 @@ const THREADS_PROCESSOR_PROMPT = `你是一位精準的 Obsidian 知識管理助
   - "30_生活與創作"
   - "40_自託管實驗室"
   - "99_未分類"
-- 若 existing_relations 已有 2 個以上的良好匹配，new_hubs 可以是空陣列 []
-- **重複檢查**：若清單中已有功能相同的頁面（如已有「觀影心得」就不再建「電影心得」），不要建立重複主題`;
+- 若 existing_relations 已有合適的 [hub] 頁，new_hubs 必須是空陣列 []`;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -156,8 +160,10 @@ export class ThreadsProcessorEngine {
 
     new Notice(`找到 ${files.length} 篇 Threads 帖文，開始批次處理...`);
 
-    // ── Build the vault page index grouped by folder ──
-    const { grouped, allBasenames } = this.collectVaultPages(folderPath);
+    // ── Build the vault page index ──
+    // allBasenames is kept mutable — new hubs are added as they are created.
+    // groupedPages is rebuilt per-file so the LLM always sees the latest hubs.
+    const allBasenames = this.collectAllBasenames(folderPath);
 
     let processedCount = 0;
 
@@ -180,7 +186,9 @@ export class ThreadsProcessorEngine {
           continue;
         }
 
-        await this.processFile(file, content, grouped, allBasenames);
+        // Rebuild the grouped page list each time so newly created hubs are visible
+        const groupedPages = this.buildGroupedPageList(folderPath);
+        await this.processFile(file, content, groupedPages, allBasenames);
         processedCount++;
       } catch (err) {
         console.error(
@@ -274,6 +282,7 @@ export class ThreadsProcessorEngine {
     );
 
     // 4. Create new hub pages if suggested & collect their names
+    //    Uses deduplication to prevent near-identical hubs.
     const hubNames: string[] = [];
     if (new_hubs && new_hubs.length > 0) {
       for (const hub of new_hubs) {
@@ -284,13 +293,22 @@ export class ThreadsProcessorEngine {
           .trim();
         if (!safeName) continue;
 
-        // Skip if a page with this basename already exists or was created this batch
+        // Check for exact match first
         if (
           allBasenames.has(safeName) ||
           this.createdHubsThisBatch.has(safeName)
         ) {
-          // Still add it to relations even if we didn't create it
           hubNames.push(safeName);
+          continue;
+        }
+
+        // Check for near-duplicate hubs (e.g. "美食探店地圖" vs "在地美食地圖")
+        const existingDuplicate = this.findDuplicateHub(safeName, allBasenames);
+        if (existingDuplicate) {
+          console.log(
+            `[ThreadsProcessor] Hub "${safeName}" is a duplicate of "${existingDuplicate}", reusing.`
+          );
+          hubNames.push(existingDuplicate);
           continue;
         }
 
@@ -448,6 +466,51 @@ export class ThreadsProcessorEngine {
       .filter((t) => t.length >= 2);
   }
 
+  // ---- Hub Deduplication -----------------------------------------------------
+
+  /**
+   * Check if a proposed hub name is a near-duplicate of an existing page.
+   * Uses keyword overlap to catch variants like:
+   *   "美食探店地圖" ≈ "在地美食地圖" ≈ "草屯在地美食地圖"
+   *
+   * Returns the existing page basename if a duplicate is found, null otherwise.
+   */
+  private findDuplicateHub(
+    proposed: string,
+    allBasenames: Set<string>
+  ): string | null {
+    const proposedTokens = this.tokenize(proposed);
+    if (proposedTokens.length === 0) return null;
+
+    let bestMatch: string | null = null;
+    let bestScore = 0;
+
+    for (const existing of allBasenames) {
+      const existingTokens = this.tokenize(existing);
+      if (existingTokens.length === 0) continue;
+
+      // Count how many tokens from the proposed name appear in the existing name
+      let matchingTokens = 0;
+      for (const pt of proposedTokens) {
+        for (const et of existingTokens) {
+          if (pt === et || pt.includes(et) || et.includes(pt)) {
+            matchingTokens++;
+            break;
+          }
+        }
+      }
+
+      // If ≥50% of proposed tokens match AND ≥2 tokens match, it's a duplicate
+      const ratio = matchingTokens / proposedTokens.length;
+      if (matchingTokens >= 2 && ratio >= 0.5 && matchingTokens > bestScore) {
+        bestScore = matchingTokens;
+        bestMatch = existing;
+      }
+    }
+
+    return bestMatch;
+  }
+
   // ---- Hub Page Creation ----------------------------------------------------
 
   /**
@@ -512,19 +575,41 @@ export class ThreadsProcessorEngine {
   // ---- Vault Page Collection ------------------------------------------------
 
   /**
-   * Collect all vault pages grouped by their parent folder.
-   * Returns both a formatted string for the prompt and a Set of basenames.
+   * Collect all vault page basenames (excluding target folder, checkpoints, etc.).
+   * Returns a mutable Set that will be updated as hubs are created.
    */
-  private collectVaultPages(excludeFolder: string): {
-    grouped: string;
-    allBasenames: Set<string>;
-  } {
+  private collectAllBasenames(excludeFolder: string): Set<string> {
+    const allFiles = this.app.vault.getMarkdownFiles();
+    const excludeNorm = normalizePath(excludeFolder).toLowerCase();
+    const basenames: Set<string> = new Set();
+
+    for (const f of allFiles) {
+      const pathLower = f.path.toLowerCase();
+      if (
+        pathLower.startsWith(excludeNorm) ||
+        pathLower.startsWith("_checkpoints") ||
+        pathLower.includes(".obsidian") ||
+        pathLower.startsWith("copilot-custom-prompts") ||
+        pathLower.startsWith("00_inbox")
+      ) {
+        continue;
+      }
+      basenames.add(f.basename);
+    }
+
+    return basenames;
+  }
+
+  /**
+   * Build the grouped page list string for the LLM prompt.
+   * Called per-file so it always includes newly created hub pages.
+   * Hub pages are annotated with [hub] so the LLM knows to prefer them.
+   */
+  private buildGroupedPageList(excludeFolder: string): string {
     const allFiles = this.app.vault.getMarkdownFiles();
     const excludeNorm = normalizePath(excludeFolder).toLowerCase();
 
-    // Group by parent folder
     const folderMap: Map<string, string[]> = new Map();
-    const allBasenames: Set<string> = new Set();
 
     for (const f of allFiles) {
       const pathLower = f.path.toLowerCase();
@@ -538,16 +623,33 @@ export class ThreadsProcessorEngine {
         continue;
       }
 
-      allBasenames.add(f.basename);
-
       const folder = f.parent?.path || "(root)";
       if (!folderMap.has(folder)) {
         folderMap.set(folder, []);
       }
-      folderMap.get(folder)!.push(f.basename);
+
+      // Annotate hub pages so the LLM can identify them
+      const isHub = this.createdHubsThisBatch.has(f.basename);
+      const label = isHub ? `${f.basename} [hub]` : f.basename;
+      folderMap.get(folder)!.push(label);
     }
 
-    // Build a grouped string representation
+    // Also check file content for hub type (for hubs created in previous runs)
+    // We do this cheaply by checking the metadata cache
+    for (const f of allFiles) {
+      const cache = this.app.metadataCache.getFileCache(f);
+      if (cache?.frontmatter?.type === "hub") {
+        const folder = f.parent?.path || "(root)";
+        const entries = folderMap.get(folder);
+        if (entries) {
+          const idx = entries.indexOf(f.basename);
+          if (idx !== -1) {
+            entries[idx] = `${f.basename} [hub]`;
+          }
+        }
+      }
+    }
+
     const lines: string[] = [];
     const sortedFolders = Array.from(folderMap.keys()).sort();
     for (const folder of sortedFolders) {
@@ -558,10 +660,7 @@ export class ThreadsProcessorEngine {
       }
     }
 
-    return {
-      grouped: lines.join("\n"),
-      allBasenames,
-    };
+    return lines.join("\n");
   }
 
   // ---- File Helpers ---------------------------------------------------------
