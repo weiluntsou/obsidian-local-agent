@@ -151,6 +151,10 @@ export class ThreadsProcessorEngine {
     // Reset hub creation cache for this batch
     this.createdHubsThisBatch.clear();
 
+    // ── Phase 0: Consolidate duplicate hub pages ──
+    // Self-healing: find and merge duplicate hubs before processing.
+    await this.consolidateHubs();
+
     // ── Collect all markdown files ──
     const files = this.getMarkdownFiles(folderPath);
     if (files.length === 0) {
@@ -466,7 +470,7 @@ export class ThreadsProcessorEngine {
       .filter((t) => t.length >= 2);
   }
 
-  // ---- Hub Deduplication -----------------------------------------------------
+  // ---- Hub Deduplication & Consolidation ------------------------------------
 
   /**
    * Check if a proposed hub name is a near-duplicate of an existing page.
@@ -489,7 +493,6 @@ export class ThreadsProcessorEngine {
       const existingTokens = this.tokenize(existing);
       if (existingTokens.length === 0) continue;
 
-      // Count how many tokens from the proposed name appear in the existing name
       let matchingTokens = 0;
       for (const pt of proposedTokens) {
         for (const et of existingTokens) {
@@ -500,7 +503,6 @@ export class ThreadsProcessorEngine {
         }
       }
 
-      // If ≥50% of proposed tokens match AND ≥2 tokens match, it's a duplicate
       const ratio = matchingTokens / proposedTokens.length;
       if (matchingTokens >= 2 && ratio >= 0.5 && matchingTokens > bestScore) {
         bestScore = matchingTokens;
@@ -509,6 +511,198 @@ export class ThreadsProcessorEngine {
     }
 
     return bestMatch;
+  }
+
+  /**
+   * Compute a bidirectional similarity score between two page names.
+   * Returns a score from 0 to 1, where 1 is an exact match.
+   */
+  private hubSimilarity(a: string, b: string): number {
+    const tokensA = this.tokenize(a);
+    const tokensB = this.tokenize(b);
+    if (tokensA.length === 0 || tokensB.length === 0) return 0;
+
+    let matchesAtoB = 0;
+    for (const ta of tokensA) {
+      for (const tb of tokensB) {
+        if (ta === tb || ta.includes(tb) || tb.includes(ta)) {
+          matchesAtoB++;
+          break;
+        }
+      }
+    }
+
+    let matchesBtoA = 0;
+    for (const tb of tokensB) {
+      for (const ta of tokensA) {
+        if (tb === ta || tb.includes(ta) || ta.includes(tb)) {
+          matchesBtoA++;
+          break;
+        }
+      }
+    }
+
+    const ratioA = matchesAtoB / tokensA.length;
+    const ratioB = matchesBtoA / tokensB.length;
+    return (ratioA + ratioB) / 2;
+  }
+
+  /**
+   * Automatically find and consolidate duplicate hub pages.
+   *
+   * Algorithm:
+   *   1. Scan all files with frontmatter `type: hub`.
+   *   2. Group hubs by semantic similarity (token overlap ≥ 0.5).
+   *   3. In each group, pick the "canonical" hub:
+   *      - Prefer the one with the most backlinks (most connected).
+   *      - Tie-break: oldest creation date.
+   *   4. For each duplicate → rewrite all [[duplicate]] wikilinks in
+   *      the vault to [[canonical]], then trash the duplicate file.
+   *   5. Report results.
+   */
+  private async consolidateHubs(): Promise<void> {
+    // 1. Find all hub files
+    const allFiles = this.app.vault.getMarkdownFiles();
+    const hubFiles: TFile[] = [];
+
+    for (const f of allFiles) {
+      const cache = this.app.metadataCache.getFileCache(f);
+      if (cache?.frontmatter?.type === "hub") {
+        hubFiles.push(f);
+      }
+    }
+
+    if (hubFiles.length < 2) return; // Nothing to consolidate
+
+    // 2. Group by similarity using Union-Find approach
+    const groups: Map<string, TFile[]> = new Map();
+    const assigned: Set<string> = new Set();
+
+    for (let i = 0; i < hubFiles.length; i++) {
+      if (assigned.has(hubFiles[i].path)) continue;
+
+      const group: TFile[] = [hubFiles[i]];
+      assigned.add(hubFiles[i].path);
+
+      for (let j = i + 1; j < hubFiles.length; j++) {
+        if (assigned.has(hubFiles[j].path)) continue;
+
+        const sim = this.hubSimilarity(
+          hubFiles[i].basename,
+          hubFiles[j].basename
+        );
+        if (sim >= 0.5) {
+          group.push(hubFiles[j]);
+          assigned.add(hubFiles[j].path);
+        }
+      }
+
+      if (group.length > 1) {
+        groups.set(hubFiles[i].basename, group);
+      }
+    }
+
+    if (groups.size === 0) return; // No duplicates found
+
+    // 3. For each group, pick canonical and consolidate
+    let totalMerged = 0;
+    const mergedNames: string[] = [];
+
+    for (const [, group] of groups) {
+      // Pick canonical: most backlinks, then oldest
+      const scored = group.map((f) => {
+        const backlinks =
+          (this.app.metadataCache as any).getBacklinksForFile?.(f)
+            ?.count?.() ?? 0;
+        return { file: f, backlinks, ctime: f.stat.ctime };
+      });
+
+      scored.sort((a, b) => {
+        if (b.backlinks !== a.backlinks) return b.backlinks - a.backlinks;
+        return a.ctime - b.ctime; // oldest first
+      });
+
+      const canonical = scored[0].file;
+      const duplicates = scored.slice(1).map((s) => s.file);
+
+      console.log(
+        `[ThreadsProcessor] Hub consolidation: canonical="${canonical.basename}", merging ${duplicates.length} duplicates: [${duplicates.map((d) => d.basename).join(", ")}]`
+      );
+
+      // 4. For each duplicate, rewrite references and delete
+      for (const dup of duplicates) {
+        await this.rewriteAllReferences(dup.basename, canonical.basename);
+
+        try {
+          await this.app.vault.trash(dup, false);
+          totalMerged++;
+          console.log(
+            `[ThreadsProcessor] Deleted duplicate hub: ${dup.basename}`
+          );
+        } catch (err) {
+          console.warn(
+            `[ThreadsProcessor] Could not delete ${dup.basename}:`,
+            err
+          );
+        }
+      }
+
+      mergedNames.push(canonical.basename);
+    }
+
+    if (totalMerged > 0) {
+      new Notice(
+        `🔄 Hub 自動整合：合併了 ${totalMerged} 個重複主題頁 → ${mergedNames.join("、")}`
+      );
+    }
+  }
+
+  /**
+   * Rewrite all [[oldName]] wikilinks across the entire vault to [[newName]].
+   * Handles both `[[oldName]]` and `[[oldName|alias]]` syntax.
+   */
+  private async rewriteAllReferences(
+    oldName: string,
+    newName: string
+  ): Promise<void> {
+    if (oldName === newName) return;
+
+    const allFiles = this.app.vault.getMarkdownFiles();
+
+    // Build regex: match [[oldName]] or [[oldName|anything]]
+    const escapedOld = oldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const linkRegex = new RegExp(
+      `\\[\\[${escapedOld}(\\|[^\\]]*)?\\]\\]`,
+      "g"
+    );
+
+    for (const f of allFiles) {
+      try {
+        const content = await this.app.vault.read(f);
+        if (!linkRegex.test(content)) continue;
+
+        // Reset regex lastIndex after test()
+        linkRegex.lastIndex = 0;
+        const updated = content.replace(linkRegex, (match, alias) => {
+          if (alias) {
+            return `[[${newName}${alias}]]`;
+          }
+          return `[[${newName}]]`;
+        });
+
+        if (updated !== content) {
+          await this.app.vault.modify(f, updated);
+          console.log(
+            `[ThreadsProcessor] Updated references in ${f.basename}: [[${oldName}]] → [[${newName}]]`
+          );
+        }
+      } catch (err) {
+        console.warn(
+          `[ThreadsProcessor] Failed to update references in ${f.basename}:`,
+          err
+        );
+      }
+    }
   }
 
   // ---- Hub Page Creation ----------------------------------------------------

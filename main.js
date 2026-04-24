@@ -1191,6 +1191,7 @@ var ThreadsProcessorEngine = class {
    */
   async processBatch(folderPath, onProgress, shouldCancel) {
     this.createdHubsThisBatch.clear();
+    await this.consolidateHubs();
     const files = this.getMarkdownFiles(folderPath);
     if (files.length === 0) {
       new import_obsidian5.Notice(`\u5728\u300C${folderPath}\u300D\u4E2D\u627E\u4E0D\u5230\u4EFB\u4F55 Markdown \u6A94\u6848\u3002`);
@@ -1425,7 +1426,7 @@ ${summary.trim()}
   tokenize(str) {
     return str.toLowerCase().split(/[\s\-_：:，,、。.()（）《》「」\[\]\/]+/).filter((t) => t.length >= 2);
   }
-  // ---- Hub Deduplication -----------------------------------------------------
+  // ---- Hub Deduplication & Consolidation ------------------------------------
   /**
    * Check if a proposed hub name is a near-duplicate of an existing page.
    * Uses keyword overlap to catch variants like:
@@ -1457,6 +1458,159 @@ ${summary.trim()}
       }
     }
     return bestMatch;
+  }
+  /**
+   * Compute a bidirectional similarity score between two page names.
+   * Returns a score from 0 to 1, where 1 is an exact match.
+   */
+  hubSimilarity(a, b) {
+    const tokensA = this.tokenize(a);
+    const tokensB = this.tokenize(b);
+    if (tokensA.length === 0 || tokensB.length === 0) return 0;
+    let matchesAtoB = 0;
+    for (const ta of tokensA) {
+      for (const tb of tokensB) {
+        if (ta === tb || ta.includes(tb) || tb.includes(ta)) {
+          matchesAtoB++;
+          break;
+        }
+      }
+    }
+    let matchesBtoA = 0;
+    for (const tb of tokensB) {
+      for (const ta of tokensA) {
+        if (tb === ta || tb.includes(ta) || ta.includes(tb)) {
+          matchesBtoA++;
+          break;
+        }
+      }
+    }
+    const ratioA = matchesAtoB / tokensA.length;
+    const ratioB = matchesBtoA / tokensB.length;
+    return (ratioA + ratioB) / 2;
+  }
+  /**
+   * Automatically find and consolidate duplicate hub pages.
+   *
+   * Algorithm:
+   *   1. Scan all files with frontmatter `type: hub`.
+   *   2. Group hubs by semantic similarity (token overlap ≥ 0.5).
+   *   3. In each group, pick the "canonical" hub:
+   *      - Prefer the one with the most backlinks (most connected).
+   *      - Tie-break: oldest creation date.
+   *   4. For each duplicate → rewrite all [[duplicate]] wikilinks in
+   *      the vault to [[canonical]], then trash the duplicate file.
+   *   5. Report results.
+   */
+  async consolidateHubs() {
+    var _a;
+    const allFiles = this.app.vault.getMarkdownFiles();
+    const hubFiles = [];
+    for (const f of allFiles) {
+      const cache = this.app.metadataCache.getFileCache(f);
+      if (((_a = cache == null ? void 0 : cache.frontmatter) == null ? void 0 : _a.type) === "hub") {
+        hubFiles.push(f);
+      }
+    }
+    if (hubFiles.length < 2) return;
+    const groups = /* @__PURE__ */ new Map();
+    const assigned = /* @__PURE__ */ new Set();
+    for (let i = 0; i < hubFiles.length; i++) {
+      if (assigned.has(hubFiles[i].path)) continue;
+      const group = [hubFiles[i]];
+      assigned.add(hubFiles[i].path);
+      for (let j = i + 1; j < hubFiles.length; j++) {
+        if (assigned.has(hubFiles[j].path)) continue;
+        const sim = this.hubSimilarity(
+          hubFiles[i].basename,
+          hubFiles[j].basename
+        );
+        if (sim >= 0.5) {
+          group.push(hubFiles[j]);
+          assigned.add(hubFiles[j].path);
+        }
+      }
+      if (group.length > 1) {
+        groups.set(hubFiles[i].basename, group);
+      }
+    }
+    if (groups.size === 0) return;
+    let totalMerged = 0;
+    const mergedNames = [];
+    for (const [, group] of groups) {
+      const scored = group.map((f) => {
+        var _a2, _b, _c, _d, _e;
+        const backlinks = (_e = (_d = (_c = (_b = (_a2 = this.app.metadataCache).getBacklinksForFile) == null ? void 0 : _b.call(_a2, f)) == null ? void 0 : _c.count) == null ? void 0 : _d.call(_c)) != null ? _e : 0;
+        return { file: f, backlinks, ctime: f.stat.ctime };
+      });
+      scored.sort((a, b) => {
+        if (b.backlinks !== a.backlinks) return b.backlinks - a.backlinks;
+        return a.ctime - b.ctime;
+      });
+      const canonical = scored[0].file;
+      const duplicates = scored.slice(1).map((s) => s.file);
+      console.log(
+        `[ThreadsProcessor] Hub consolidation: canonical="${canonical.basename}", merging ${duplicates.length} duplicates: [${duplicates.map((d) => d.basename).join(", ")}]`
+      );
+      for (const dup of duplicates) {
+        await this.rewriteAllReferences(dup.basename, canonical.basename);
+        try {
+          await this.app.vault.trash(dup, false);
+          totalMerged++;
+          console.log(
+            `[ThreadsProcessor] Deleted duplicate hub: ${dup.basename}`
+          );
+        } catch (err) {
+          console.warn(
+            `[ThreadsProcessor] Could not delete ${dup.basename}:`,
+            err
+          );
+        }
+      }
+      mergedNames.push(canonical.basename);
+    }
+    if (totalMerged > 0) {
+      new import_obsidian5.Notice(
+        `\u{1F504} Hub \u81EA\u52D5\u6574\u5408\uFF1A\u5408\u4F75\u4E86 ${totalMerged} \u500B\u91CD\u8907\u4E3B\u984C\u9801 \u2192 ${mergedNames.join("\u3001")}`
+      );
+    }
+  }
+  /**
+   * Rewrite all [[oldName]] wikilinks across the entire vault to [[newName]].
+   * Handles both `[[oldName]]` and `[[oldName|alias]]` syntax.
+   */
+  async rewriteAllReferences(oldName, newName) {
+    if (oldName === newName) return;
+    const allFiles = this.app.vault.getMarkdownFiles();
+    const escapedOld = oldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const linkRegex = new RegExp(
+      `\\[\\[${escapedOld}(\\|[^\\]]*)?\\]\\]`,
+      "g"
+    );
+    for (const f of allFiles) {
+      try {
+        const content = await this.app.vault.read(f);
+        if (!linkRegex.test(content)) continue;
+        linkRegex.lastIndex = 0;
+        const updated = content.replace(linkRegex, (match, alias) => {
+          if (alias) {
+            return `[[${newName}${alias}]]`;
+          }
+          return `[[${newName}]]`;
+        });
+        if (updated !== content) {
+          await this.app.vault.modify(f, updated);
+          console.log(
+            `[ThreadsProcessor] Updated references in ${f.basename}: [[${oldName}]] \u2192 [[${newName}]]`
+          );
+        }
+      } catch (err) {
+        console.warn(
+          `[ThreadsProcessor] Failed to update references in ${f.basename}:`,
+          err
+        );
+      }
+    }
   }
   // ---- Hub Page Creation ----------------------------------------------------
   /**
