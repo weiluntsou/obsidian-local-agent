@@ -1101,51 +1101,99 @@ ${content}
 
 // src/threadsProcessor.ts
 var import_obsidian5 = require("obsidian");
-var THREADS_PROCESSOR_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u7CBE\u6E96\u7684\u5167\u5BB9\u5206\u6790\u52A9\u624B\uFF0C\u5C08\u9580\u8655\u7406\u793E\u7FA4\u5A92\u9AD4\u77ED\u6587\uFF08\u4F86\u81EA Threads / Instagram\uFF09\u3002
+var THREADS_PROCESSOR_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u7CBE\u6E96\u7684 Obsidian \u77E5\u8B58\u7BA1\u7406\u52A9\u624B\uFF0C\u5C08\u9580\u8655\u7406\u793E\u7FA4\u5A92\u9AD4\u77ED\u6587\uFF08\u4F86\u81EA Threads / Instagram\uFF09\u3002
 
-\u4F60\u5C07\u6536\u5230\u4E00\u7BC7\u5E16\u6587\u7684\u300C\u539F\u59CB\u6A94\u540D\u300D\u548C\u300C\u5167\u6587\u300D\uFF0C\u4EE5\u53CA\u4F7F\u7528\u8005 Obsidian \u77E5\u8B58\u5EAB\u4E2D\u300C\u73FE\u6709\u9801\u9762\u6E05\u55AE\u300D\u3002
+\u4F60\u5C07\u6536\u5230\uFF1A
+1. \u4E00\u7BC7\u5E16\u6587\u7684\u300C\u539F\u59CB\u6A94\u540D\u300D\u8207\u300C\u5167\u6587\u300D
+2. \u4F7F\u7528\u8005 Obsidian \u77E5\u8B58\u5EAB\u4E2D\u300C\u73FE\u6709\u9801\u9762\u6E05\u55AE\u300D\uFF08\u6309\u8CC7\u6599\u593E\u5206\u7D44\uFF09
 
-\u8ACB\u56B4\u683C\u4F9D\u7167\u4EE5\u4E0B JSON \u683C\u5F0F\u56DE\u50B3\uFF0C\u4E0D\u8981\u8F38\u51FA\u4EFB\u4F55\u5176\u4ED6\u6587\u5B57\uFF1A
+---
+
+\u4F60\u5FC5\u9808\u56DE\u50B3\u4EE5\u4E0B JSON\uFF0C\u4E0D\u5F97\u8F38\u51FA\u5176\u4ED6\u4EFB\u4F55\u6587\u5B57\u3002
 
 {
-  "title": "\uFF08\u6839\u64DA\u5167\u6587\u4E0B\u4E00\u500B\u7CBE\u6E96\u7684\u7E41\u9AD4\u4E2D\u6587\u6A19\u984C\uFF0C\u6700\u591A 20 \u500B\u5B57\u3002\u82E5\u539F\u59CB\u6A94\u540D\u4E2D\u6709\u65E5\u671F\u5982 2025-06-17\uFF0C\u8ACB\u5C07\u65E5\u671F\u4FDD\u7559\u5728\u6A19\u984C\u524D\u9762\uFF0C\u683C\u5F0F\u70BA YYYY-MM-DD \u52A0\u7A7A\u683C\u518D\u63A5\u6A19\u984C\uFF0C\u65E5\u671F\u4E0D\u8A08\u5165 20 \u5B57\u4E0A\u9650\uFF09",
-  "summary": "\uFF08\u82E5\u5167\u6587\u8D85\u904E 100 \u5B57\uFF0C\u8ACB\u5BEB\u4E00\u6BB5 50 \u5B57\u4EE5\u5167\u7684\u6458\u8981\uFF0C\u6355\u6349\u6838\u5FC3\u4E3B\u984C\u6216\u89C0\u9EDE\uFF1B\u82E5\u4E0D\u8D85\u904E 100 \u5B57\u5247\u56DE\u50B3\u7A7A\u5B57\u4E32 ""\uFF09",
-  "relations": ["\u9801\u9762\u540D\u7A31A", "\u9801\u9762\u540D\u7A31B"]
+  "title": "\u65B0\u6A19\u984C",
+  "summary": "\u6458\u8981\u6587\u5B57\uFF0C\u6216\u7A7A\u5B57\u4E32",
+  "existing_relations": ["\u5DF2\u5B58\u5728\u7684\u9801\u9762\u540D\u7A31A", "\u9801\u9762\u540D\u7A31B"],
+  "new_hubs": [
+    {
+      "name": "\u65B0\u4E3B\u984C\u9801\u540D\u7A31",
+      "description": "2~3\u53E5\u8A71\u63CF\u8FF0\u9019\u500B\u4E3B\u984C\u9801\u7684\u6DB5\u84CB\u7BC4\u570D\uFF0C\u8B93\u672A\u4F86\u7684\u7B46\u8A18\u4E5F\u80FD\u9023\u7D50\u904E\u4F86",
+      "category": "30_\u751F\u6D3B\u8207\u5275\u4F5C"
+    }
+  ]
 }
 
-## \u95DC\u65BC relations \u7684\u898F\u5247
-- \u5F9E\u300C\u73FE\u6709\u9801\u9762\u6E05\u55AE\u300D\u4E2D\u6311\u9078 1 \u5230 3 \u500B\u8207\u5167\u6587\u4E3B\u984C\u6700\u76F8\u95DC\u7684\u9801\u9762\u3002
-- \u53EA\u80FD\u5F9E\u63D0\u4F9B\u7684\u6E05\u55AE\u4E2D\u9078\u64C7\uFF0C\u4E0D\u53EF\u81EA\u5275\u9801\u9762\u540D\u7A31\u3002
-- \u82E5\u6C92\u6709\u4EFB\u4F55\u76F8\u95DC\u9801\u9762\uFF0C\u56DE\u50B3\u7A7A\u9663\u5217 []\u3002
-- \u56DE\u50B3\u7684\u662F\u9801\u9762\u540D\u7A31\uFF08\u4E0D\u542B\u8DEF\u5F91\u524D\u7DB4\uFF09\uFF0C\u4F8B\u5982 "\u65FA\u5361" \u800C\u975E "30_Life_&_Creations/\u65FA\u5361"\u3002
+---
 
-## \u95DC\u65BC title \u7684\u898F\u5247
-- \u6A19\u984C\u5FC5\u9808\u662F\u7E41\u9AD4\u4E2D\u6587\u3002
-- \u6A19\u984C\u61C9\u7CBE\u6E96\u6982\u62EC\u6587\u7AE0\u7684\u6838\u5FC3\u5167\u5BB9\u6216\u4E3B\u984C\u3002
-- \u4E0D\u8981\u4F7F\u7528\u5F15\u865F\u5305\u8986\u6A19\u984C\u6587\u5B57\u672C\u8EAB\u3002
-- \u82E5\u6A94\u540D\u4E2D\u542B\u6709\u65E5\u671F\uFF0C\u6A19\u984C\u683C\u5F0F\u7BC4\u4F8B\uFF1A"2025-06-17 \u8349\u5C6F\u78B3\u6854\u71D2\u8089\u4FBF\u7576\u521D\u9AD4\u9A57"
+## title \u898F\u5247
+- \u7E41\u9AD4\u4E2D\u6587\uFF0C\u6700\u591A 20 \u5B57\uFF08\u65E5\u671F\u4E0D\u8A08\u5165\u5B57\u6578\uFF09
+- \u82E5\u539F\u59CB\u6A94\u540D\u6709\u65E5\u671F\uFF08\u5982 2025-06-17\uFF09\uFF0C\u4FDD\u7559\u65E5\u671F\u524D\u7DB4
+- \u683C\u5F0F\uFF1A"2025-06-17 \u8349\u5C6F\u78B3\u6854\u71D2\u8089\u4FBF\u7576\u521D\u9AD4\u9A57"
 
-## \u95DC\u65BC summary \u7684\u898F\u5247
-- \u6458\u8981\u61C9\u7576\u662F\u4E00\u6BB5\u7CBE\u7149\u7684\u9673\u8FF0\u53E5\uFF0C\u4E0D\u662F\u689D\u5217\u5F0F\u3002
-- \u82E5\u5167\u6587\u5305\u542B\u98DF\u8A18\u3001\u5F71\u8A55\u3001\u66F8\u8A55\u7B49\uFF0C\u6458\u8981\u61C9\u9EDE\u51FA\u8A55\u50F9\u6216\u7D50\u8AD6\u3002`;
+## summary \u898F\u5247
+- \u82E5\u5167\u6587\uFF08\u4E0D\u542B frontmatter\uFF09\u8D85\u904E 100 \u5B57 \u2192 \u64B0\u5BEB 50 \u5B57\u4EE5\u5167\u7684\u7CBE\u7149\u6458\u8981
+- \u82E5\u4E0D\u8D85\u904E 100 \u5B57 \u2192 \u56DE\u50B3\u7A7A\u5B57\u4E32 ""
+- \u98DF\u8A18\u9EDE\u51FA\u8A55\u50F9\u3001\u5F71\u8A55\u9EDE\u51FA\u7D50\u8AD6\u3001\u6280\u8853\u6587\u9EDE\u51FA\u6838\u5FC3\u89C0\u9EDE
+
+## existing_relations \u898F\u5247\uFF08\u6700\u91CD\u8981\uFF01\uFF09
+- \u5F9E\u300C\u73FE\u6709\u9801\u9762\u6E05\u55AE\u300D\u4E2D\u6311\u9078 **1 \u5230 5 \u500B**\u8207\u5167\u6587\u4E3B\u984C\u76F8\u95DC\u7684\u9801\u9762
+- **\u8ACB\u7528\u300C\u4E3B\u984C\u95DC\u806F\u6027\u300D\u5224\u65B7**\uFF0C\u800C\u975E\u9010\u5B57\u6BD4\u5C0D\u3002\u4F8B\u5982\uFF1A
+  - \u5F71\u8A55 \u2192 \u9023\u7D50\u5230\u300C\u89C0\u5F71\u5FC3\u5F97\u300D\u3001\u5176\u4ED6\u76F8\u540C\u5C0E\u6F14/\u6F14\u54E1\u7684\u5F71\u8A55\u7B46\u8A18
+  - \u98DF\u8A18 \u2192 \u9023\u7D50\u5230\u300C\u963F\u7434\u9EBB\u8FA3\u98A8\u5473\u300D\uFF08\u540C\u70BA\u98DF\u8A18\uFF09\u3001\u300C\u8349\u5C6F\u7F8E\u98DF\u300D\u7B49
+  - \u66F8\u8A55 \u2192 \u9023\u7D50\u5230\u300C\u8B80\u66F8\u5FC3\u5F97\u300D\u3001\u540C\u4E3B\u984C\u7684\u7B46\u8A18
+  - \u6280\u8853\u6587 \u2192 \u9023\u7D50\u5230\u540C\u9818\u57DF\u7684\u6280\u8853\u7B46\u8A18
+  - \u751F\u6D3B\u611F\u60F3 \u2192 \u9023\u7D50\u5230\u300C\u5FC3\u7406\u5B78\u8207\u500B\u4EBA\u6210\u9577\u300D\u76F8\u95DC\u7B46\u8A18
+  - \u65E5\u6587\u5B78\u7FD2 \u2192 \u9023\u7D50\u5230\u76F8\u95DC\u5B78\u7FD2\u7B46\u8A18
+- **\u56DE\u50B3\u7684\u662F\u9801\u9762\u7684 basename**\uFF08\u4E0D\u542B\u8DEF\u5F91\uFF09\uFF0C\u4F8B\u5982 "\u89C0\u5F71\u5FC3\u5F97" \u800C\u975E "30_Life_&_Creations/\u89C0\u5F71\u5FC3\u5F97"
+- **\u76E1\u91CF\u627E\u5230\u81F3\u5C11 1 \u500B**\uFF0C\u53EA\u6709\u5728\u6E05\u55AE\u4E2D\u5B8C\u5168\u6C92\u6709\u4EFB\u4F55\u6CBE\u5F97\u4E0A\u908A\u7684\u9801\u9762\u6642\u624D\u5141\u8A31\u7A7A\u9663\u5217
+
+## new_hubs \u898F\u5247\uFF08\u6E1B\u5C11\u5B64\u7ACB\u7B46\u8A18\u7684\u95DC\u9375\uFF01\uFF09
+- \u7576 existing_relations \u627E\u5230\u7684\u9801\u9762\u4E0D\u8DB3 2 \u500B\u6642\uFF0C**\u5FC5\u9808\u5EFA\u8B70 1 \u500B\u65B0\u7684\u4E3B\u984C\u9801**
+- \u65B0\u4E3B\u984C\u9801\u7684\u540D\u7A31\u61C9\u8A72\u662F\u4E00\u500B\u300C\u53EF\u4EE5\u6536\u96C6\u540C\u985E\u672A\u4F86\u7B46\u8A18\u300D\u7684\u901A\u7528\u4E3B\u984C\uFF0C\u4F8B\u5982\uFF1A
+  - \u4E00\u7BC7\u8349\u5C6F\u98DF\u8A18 \u2192 \u5EFA\u8B70\u300C\u8349\u5C6F\u7F8E\u98DF\u5730\u5716\u300D
+  - \u4E00\u7BC7\u5F71\u8A55 \u2192 \u82E5\u300C\u89C0\u5F71\u5FC3\u5F97\u300D\u5DF2\u5B58\u5728\u5C31\u4E0D\u7528\u518D\u5EFA\uFF0C\u6539\u9023\u7D50\u904E\u53BB
+  - \u4E00\u7BC7 AI \u5DE5\u5177\u4F7F\u7528\u5FC3\u5F97 \u2192 \u5EFA\u8B70\u300CAI \u5DE5\u5177\u5BE6\u6230\u7B46\u8A18\u300D
+  - \u4E00\u7BC7\u80B2\u5152\u65E5\u5E38 \u2192 \u5EFA\u8B70\u300C\u89AA\u5B50\u751F\u6D3B\u8A18\u9304\u300D
+  - \u4E00\u7BC7\u65C5\u904A \u2192 \u5EFA\u8B70\u300C\u65C5\u884C\u898B\u805E\u300D
+- name: \u7E41\u9AD4\u4E2D\u6587\uFF0C\u7C21\u6F54\u660E\u78BA\uFF086~12 \u5B57\uFF09
+- description: 2~3 \u53E5\u8A71\u63CF\u8FF0\u6DB5\u84CB\u7BC4\u570D
+- category: \u5FC5\u9808\u662F\u4EE5\u4E0B\u4E94\u500B\u4E4B\u4E00\uFF1A
+  - "10_\u5DE5\u4F5C\u8207\u7BA1\u7406"
+  - "20_\u5B78\u8853\u8207\u96FB\u8166\u79D1\u5B78"
+  - "30_\u751F\u6D3B\u8207\u5275\u4F5C"
+  - "40_\u81EA\u8A17\u7BA1\u5BE6\u9A57\u5BA4"
+  - "99_\u672A\u5206\u985E"
+- \u82E5 existing_relations \u5DF2\u6709 2 \u500B\u4EE5\u4E0A\u7684\u826F\u597D\u5339\u914D\uFF0Cnew_hubs \u53EF\u4EE5\u662F\u7A7A\u9663\u5217 []
+- **\u91CD\u8907\u6AA2\u67E5**\uFF1A\u82E5\u6E05\u55AE\u4E2D\u5DF2\u6709\u529F\u80FD\u76F8\u540C\u7684\u9801\u9762\uFF08\u5982\u5DF2\u6709\u300C\u89C0\u5F71\u5FC3\u5F97\u300D\u5C31\u4E0D\u518D\u5EFA\u300C\u96FB\u5F71\u5FC3\u5F97\u300D\uFF09\uFF0C\u4E0D\u8981\u5EFA\u7ACB\u91CD\u8907\u4E3B\u984C`;
+var VALID_CATEGORIES = [
+  "10_\u5DE5\u4F5C\u8207\u7BA1\u7406",
+  "20_\u5B78\u8853\u8207\u96FB\u8166\u79D1\u5B78",
+  "30_\u751F\u6D3B\u8207\u5275\u4F5C",
+  "40_\u81EA\u8A17\u7BA1\u5BE6\u9A57\u5BA4",
+  "99_\u672A\u5206\u985E"
+];
 var ThreadsProcessorEngine = class {
   constructor(app, apiClient, temperature) {
     this.app = app;
     this.apiClient = apiClient;
     this.temperature = temperature;
+    /** Cache of hub pages created during this batch to avoid duplicates. */
+    this.createdHubsThisBatch = /* @__PURE__ */ new Set();
   }
   /**
    * Process all markdown files inside the given folder path.
    * Returns the count of successfully processed files.
    */
   async processBatch(folderPath, onProgress, shouldCancel) {
+    this.createdHubsThisBatch.clear();
     const files = this.getMarkdownFiles(folderPath);
     if (files.length === 0) {
       new import_obsidian5.Notice(`\u5728\u300C${folderPath}\u300D\u4E2D\u627E\u4E0D\u5230\u4EFB\u4F55 Markdown \u6A94\u6848\u3002`);
       return 0;
     }
     new import_obsidian5.Notice(`\u627E\u5230 ${files.length} \u7BC7 Threads \u5E16\u6587\uFF0C\u958B\u59CB\u6279\u6B21\u8655\u7406...`);
-    const existingPages = this.collectVaultPageNames(folderPath);
+    const { grouped, allBasenames } = this.collectVaultPages(folderPath);
     let processedCount = 0;
     for (let i = 0; i < files.length; i++) {
       if (shouldCancel == null ? void 0 : shouldCancel()) {
@@ -1162,7 +1210,7 @@ var ThreadsProcessorEngine = class {
           );
           continue;
         }
-        await this.processFile(file, content, existingPages);
+        await this.processFile(file, content, grouped, allBasenames);
         processedCount++;
       } catch (err) {
         console.error(
@@ -1171,10 +1219,15 @@ var ThreadsProcessorEngine = class {
         );
       }
     }
+    if (this.createdHubsThisBatch.size > 0) {
+      new import_obsidian5.Notice(
+        `\u672C\u6B21\u5171\u5EFA\u7ACB ${this.createdHubsThisBatch.size} \u500B\u65B0\u4E3B\u984C\u9801\uFF1A${Array.from(this.createdHubsThisBatch).join("\u3001")}`
+      );
+    }
     return processedCount;
   }
   // ---- Single-file processing -----------------------------------------------
-  async processFile(file, content, existingPages) {
+  async processFile(file, content, groupedPages, allBasenames) {
     var _a;
     const body = this.stripFrontmatter(content);
     if (body.trim().length < 10) {
@@ -1184,15 +1237,14 @@ var ThreadsProcessorEngine = class {
       return;
     }
     await this.saveCheckpoint(file, content);
-    const pageListStr = existingPages.slice(0, 200).join("\n");
     const userPrompt = [
       `\u3010\u539F\u59CB\u6A94\u540D\u3011\uFF1A${file.basename}`,
       "",
       `\u3010\u5167\u6587\u3011\uFF1A`,
       body,
       "",
-      `\u3010\u73FE\u6709\u9801\u9762\u6E05\u55AE\u3011\uFF08\u5171 ${existingPages.length} \u9801\uFF0C\u4EE5\u4E0B\u5217\u51FA\u524D 200 \u500B\uFF09\uFF1A`,
-      pageListStr
+      `\u3010\u73FE\u6709\u9801\u9762\u6E05\u55AE\uFF08\u6309\u8CC7\u6599\u593E\u5206\u7D44\uFF09\u3011\uFF1A`,
+      groupedPages
     ].join("\n");
     const rawResponse = await this.apiClient.prompt(
       THREADS_PROCESSOR_PROMPT,
@@ -1203,11 +1255,11 @@ var ThreadsProcessorEngine = class {
     if (!parsed) {
       console.warn(
         `[ThreadsProcessor] Failed to parse LLM response for ${file.basename}. Raw:`,
-        rawResponse.substring(0, 300)
+        rawResponse.substring(0, 500)
       );
       return;
     }
-    const { title, summary, relations } = parsed;
+    const { title, summary, existing_relations, new_hubs } = parsed;
     await this.app.fileManager.processFrontMatter(file, (fm) => {
       fm["threads-processed"] = true;
       if (title) {
@@ -1225,19 +1277,47 @@ var ThreadsProcessorEngine = class {
 ${summary.trim()}
 `;
     }
-    if (relations && relations.length > 0) {
-      const validRelations = relations.filter(
-        (r) => existingPages.includes(r)
-      );
-      if (validRelations.length > 0) {
-        appendSection += `
+    const resolvedExisting = this.resolveRelations(
+      existing_relations || [],
+      allBasenames
+    );
+    const hubNames = [];
+    if (new_hubs && new_hubs.length > 0) {
+      for (const hub of new_hubs) {
+        if (!hub.name || !hub.description) continue;
+        const safeName = hub.name.replace(/[\\/:\"*?<>|#^\[\]]/g, "").trim();
+        if (!safeName) continue;
+        if (allBasenames.has(safeName) || this.createdHubsThisBatch.has(safeName)) {
+          hubNames.push(safeName);
+          continue;
+        }
+        try {
+          await this.createHubPage(safeName, hub.description, hub.category);
+          this.createdHubsThisBatch.add(safeName);
+          allBasenames.add(safeName);
+          hubNames.push(safeName);
+          console.log(
+            `[ThreadsProcessor] Created hub page: ${safeName}`
+          );
+        } catch (err) {
+          console.warn(
+            `[ThreadsProcessor] Failed to create hub page ${safeName}:`,
+            err
+          );
+        }
+      }
+    }
+    const allRelations = Array.from(
+      /* @__PURE__ */ new Set([...resolvedExisting, ...hubNames])
+    );
+    if (allRelations.length > 0) {
+      appendSection += `
 ## \u95DC\u806F\u7B46\u8A18
 
 `;
-        for (const rel of validRelations) {
-          appendSection += `- [[${rel}]]
+      for (const rel of allRelations) {
+        appendSection += `- [[${rel}]]
 `;
-        }
       }
     }
     if (appendSection) {
@@ -1251,35 +1331,173 @@ ${summary.trim()}
         const newPath = (0, import_obsidian5.normalizePath)(`${parentDir}/${safeName}.md`);
         if (!this.app.vault.getAbstractFileByPath(newPath)) {
           await this.app.vault.rename(file, newPath);
-          new import_obsidian5.Notice(`\u2705 \u5DF2\u8655\u7406\u4E26\u91CD\u65B0\u547D\u540D\uFF1A${safeName}`);
+          new import_obsidian5.Notice(
+            `\u2705 ${safeName}\uFF08${allRelations.length} \u500B\u95DC\u806F\uFF09`
+          );
         } else {
-          new import_obsidian5.Notice(`\u2705 \u5DF2\u8655\u7406\uFF1A${file.basename}\uFF08\u6A19\u984C\u91CD\u8907\uFF0C\u672A\u91CD\u65B0\u547D\u540D\uFF09`);
+          new import_obsidian5.Notice(
+            `\u2705 ${file.basename}\uFF08${allRelations.length} \u500B\u95DC\u806F\uFF0C\u540D\u7A31\u91CD\u8907\u672A\u6539\u540D\uFF09`
+          );
         }
       } else {
-        new import_obsidian5.Notice(`\u2705 \u5DF2\u8655\u7406\uFF1A${file.basename}`);
+        new import_obsidian5.Notice(
+          `\u2705 ${file.basename}\uFF08${allRelations.length} \u500B\u95DC\u806F\uFF09`
+        );
       }
     } else {
-      new import_obsidian5.Notice(`\u2705 \u5DF2\u8655\u7406\uFF1A${file.basename}`);
+      new import_obsidian5.Notice(
+        `\u2705 ${file.basename}\uFF08${allRelations.length} \u500B\u95DC\u806F\uFF09`
+      );
     }
   }
-  // ---- Helpers ---------------------------------------------------------------
+  // ---- Relation Matching ----------------------------------------------------
   /**
-   * Collect all markdown file basenames in the vault, excluding the
-   * target folder itself, checkpoints, and system folders.
+   * Resolve LLM-suggested relation names against the actual vault page
+   * basenames using fuzzy matching:
+   *   1. Exact match (case-insensitive)
+   *   2. Substring containment (e.g. "觀影心得" matches "觀影心得")
+   *   3. Partial keyword overlap
    */
-  collectVaultPageNames(excludeFolder) {
-    const allFiles = this.app.vault.getMarkdownFiles();
-    const excludeNorm = (0, import_obsidian5.normalizePath)(excludeFolder).toLowerCase();
-    const names = /* @__PURE__ */ new Set();
-    for (const f of allFiles) {
-      const pathLower = f.path.toLowerCase();
-      if (pathLower.startsWith(excludeNorm) || pathLower.startsWith("_checkpoints") || pathLower.includes(".obsidian")) {
+  resolveRelations(suggestions, allBasenames) {
+    const resolved = [];
+    const basenameArray = Array.from(allBasenames);
+    for (const suggestion of suggestions) {
+      if (!suggestion || suggestion.trim().length === 0) continue;
+      const suggLower = suggestion.trim().toLowerCase();
+      const exact = basenameArray.find(
+        (b) => b.toLowerCase() === suggLower
+      );
+      if (exact) {
+        resolved.push(exact);
         continue;
       }
-      names.add(f.basename);
+      const containsMatch = basenameArray.find(
+        (b) => b.toLowerCase().includes(suggLower) || suggLower.includes(b.toLowerCase())
+      );
+      if (containsMatch) {
+        resolved.push(containsMatch);
+        continue;
+      }
+      const suggTokens = this.tokenize(suggestion);
+      let bestMatch = null;
+      let bestScore = 0;
+      for (const basename of basenameArray) {
+        const baseTokens = this.tokenize(basename);
+        let score = 0;
+        for (const st of suggTokens) {
+          for (const bt of baseTokens) {
+            if (st.length >= 2 && bt.length >= 2) {
+              if (st === bt) {
+                score += 3;
+              } else if (st.includes(bt) || bt.includes(st)) {
+                score += 2;
+              }
+            }
+          }
+        }
+        if (score > bestScore && score >= 3) {
+          bestScore = score;
+          bestMatch = basename;
+        }
+      }
+      if (bestMatch) {
+        resolved.push(bestMatch);
+      }
     }
-    return Array.from(names).sort();
+    return Array.from(new Set(resolved));
   }
+  /**
+   * Tokenize a string into meaningful segments for fuzzy matching.
+   */
+  tokenize(str) {
+    return str.toLowerCase().split(/[\s\-_：:，,、。.()（）《》「」\[\]\/]+/).filter((t) => t.length >= 2);
+  }
+  // ---- Hub Page Creation ----------------------------------------------------
+  /**
+   * Create a new thematic hub page in the appropriate category folder.
+   * These are lightweight "index" pages that serve as connection points
+   * for future notes on the same topic.
+   */
+  async createHubPage(name, description, category) {
+    if (!VALID_CATEGORIES.includes(category)) {
+      category = "30_\u751F\u6D3B\u8207\u5275\u4F5C";
+    }
+    const destFolder = (0, import_obsidian5.normalizePath)(category);
+    if (!this.app.vault.getAbstractFileByPath(destFolder)) {
+      await this.app.vault.createFolder(destFolder);
+    }
+    const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+    const filePath = (0, import_obsidian5.normalizePath)(`${category}/${name}.md`);
+    if (this.app.vault.getAbstractFileByPath(filePath)) {
+      return;
+    }
+    const content = [
+      "---",
+      `title: "${name}"`,
+      "type: hub",
+      `category: ${category}`,
+      `created: ${today}`,
+      "tags:",
+      "  - hub",
+      "  - auto-generated",
+      "---",
+      "",
+      `# ${name}`,
+      "",
+      `> [!info] \u81EA\u52D5\u5EFA\u7ACB\u7684\u4E3B\u984C\u9801`,
+      `> \u6B64\u9801\u9762\u7531 Threads \u8655\u7406\u5668\u81EA\u52D5\u5EFA\u7ACB\uFF0C\u4F5C\u70BA\u540C\u4E3B\u984C\u7B46\u8A18\u7684\u9023\u7D50\u4E2D\u5FC3\u3002`,
+      `> \u5EFA\u7ACB\u65E5\u671F\uFF1A${today}`,
+      "",
+      `## \u4E3B\u984C\u63CF\u8FF0`,
+      "",
+      description,
+      "",
+      `## \u76F8\u95DC\u7B46\u8A18`,
+      "",
+      "> \u4EE5\u4E0B\u7B46\u8A18\u6703\u81EA\u52D5\u900F\u904E\u53CD\u5411\u9023\u7D50\uFF08Backlinks\uFF09\u51FA\u73FE\u5728\u9019\u88E1\u3002",
+      ""
+    ].join("\n");
+    await this.app.vault.create(filePath, content);
+  }
+  // ---- Vault Page Collection ------------------------------------------------
+  /**
+   * Collect all vault pages grouped by their parent folder.
+   * Returns both a formatted string for the prompt and a Set of basenames.
+   */
+  collectVaultPages(excludeFolder) {
+    var _a;
+    const allFiles = this.app.vault.getMarkdownFiles();
+    const excludeNorm = (0, import_obsidian5.normalizePath)(excludeFolder).toLowerCase();
+    const folderMap = /* @__PURE__ */ new Map();
+    const allBasenames = /* @__PURE__ */ new Set();
+    for (const f of allFiles) {
+      const pathLower = f.path.toLowerCase();
+      if (pathLower.startsWith(excludeNorm) || pathLower.startsWith("_checkpoints") || pathLower.includes(".obsidian") || pathLower.startsWith("copilot-custom-prompts") || pathLower.startsWith("00_inbox")) {
+        continue;
+      }
+      allBasenames.add(f.basename);
+      const folder = ((_a = f.parent) == null ? void 0 : _a.path) || "(root)";
+      if (!folderMap.has(folder)) {
+        folderMap.set(folder, []);
+      }
+      folderMap.get(folder).push(f.basename);
+    }
+    const lines = [];
+    const sortedFolders = Array.from(folderMap.keys()).sort();
+    for (const folder of sortedFolders) {
+      const pages = folderMap.get(folder);
+      lines.push(`
+\u{1F4C1} ${folder}/`);
+      for (const page of pages.sort()) {
+        lines.push(`  - ${page}`);
+      }
+    }
+    return {
+      grouped: lines.join("\n"),
+      allBasenames
+    };
+  }
+  // ---- File Helpers ---------------------------------------------------------
   /**
    * Get all markdown files directly inside the given folder (non-recursive).
    * Sorted by modification time (newest first).
