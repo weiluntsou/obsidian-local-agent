@@ -106,8 +106,6 @@ export class NoteRefinerEngine {
       // ── Ontology Preservation: capture relationships before rewrite ──
       const ontology = this.captureOntology(originalContent);
 
-      // ── Change Checkpoint: save a snapshot before destructive rewrite ──
-      await this.saveCheckpoint(file, originalContent);
 
       new Notice(`正在精修「${file.basename}」...這可能需要一些時間。`);
 
@@ -468,50 +466,5 @@ ${data.content}
     return parts.join("\n");
   }
 
-  // ========================================================================
-  // Change Checkpoint System
-  // ========================================================================
 
-  /**
-   * Save a full snapshot of the file content before destructive rewriting.
-   * Checkpoints are stored in `_checkpoints/<basename>/` with timestamped
-   * filenames so the user can diff or roll back at any time.
-   */
-  private async saveCheckpoint(file: TFile, content: string): Promise<void> {
-    try {
-      const checkpointDir = normalizePath(`_checkpoints/${file.basename}`);
-      const existingDir = this.app.vault.getAbstractFileByPath(checkpointDir);
-      if (!existingDir) {
-        await this.app.vault.createFolder(checkpointDir);
-      }
-
-      const now = new Date();
-      const ts = now.toISOString().replace(/[:.]/g, "-");
-      const checkpointPath = normalizePath(
-        `${checkpointDir}/${file.basename}_${ts}.md`
-      );
-
-      const header = [
-        "---",
-        "type: checkpoint",
-        `source: "[[${file.basename}]]"`,
-        `checkpoint_created: ${now.toISOString()}`,
-        `original_path: "${file.path}"`,
-        "---",
-        "",
-        "> [!warning] 此為自動保存的變更檢查點（Checkpoint）",
-        `> 原始檔案：[[${file.basename}]]`,
-        `> 快照時間：${now.toISOString()}`,
-        "",
-        "---",
-        "",
-      ].join("\n");
-
-      await this.app.vault.create(checkpointPath, header + content);
-      console.log(`[NoteRefinerEngine] Checkpoint saved: ${checkpointPath}`);
-    } catch (err) {
-      // Non-fatal: log but don't block the main flow
-      console.warn("[NoteRefinerEngine] Failed to save checkpoint:", err);
-    }
-  }
 }

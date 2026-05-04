@@ -34,13 +34,10 @@ export class CleanerEngine {
   ) {}
 
   public async cleanFile(file: TFile): Promise<void> {
-    new Notice(`正在啟動「${file.basename}」的 CPR 保留檢查點清掃作業...`);
+    new Notice(`正在啟動「${file.basename}」的 CPR 清掃作業...`);
     try {
       const originalContent = await this.app.vault.read(file);
       
-      // ── 第一維度：變更保護機制 Checkpoints & Safety ──
-      // 執行所有變更前，先保存原始檔的 checkpoint
-      await this.saveCheckpoint(file, originalContent);
 
       // ── 第一維度：知識完整性驗證 Integrity Check ──
       const isOrphan = this.checkIfOrphan(file);
@@ -194,30 +191,5 @@ ${bodyContent}
     return Object.keys(unresolved);
   }
 
-  private async saveCheckpoint(file: TFile, content: string): Promise<void> {
-    try {
-      const checkpointDir = normalizePath(`_checkpoints/${file.basename}`);
-      const existingDir = this.app.vault.getAbstractFileByPath(checkpointDir);
-      if (!existingDir) {
-        await this.app.vault.createFolder(checkpointDir);
-      }
-      const now = new Date();
-      const ts = now.toISOString().replace(/[:.]/g, "-");
-      const checkpointPath = normalizePath(`${checkpointDir}/${file.basename}_${ts}.md`);
 
-      const header = [
-        "---",
-        "type: checkpoint",
-        `source: "[[${file.basename}]]"`,
-        `checkpoint_created: ${now.toISOString()}`,
-        "---",
-        "",
-        "> [!warning] 清掃前自動保存的變更檢查點（Snapshot）",
-        ""
-      ].join("\n");
-      await this.app.vault.create(checkpointPath, header + content);
-    } catch (err) {
-      console.warn("[CleanerEngine] Failed to save checkpoint:", err);
-    }
-  }
 }

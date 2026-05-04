@@ -229,8 +229,7 @@ export class ThreadsProcessorEngine {
       return;
     }
 
-    // ── Checkpoint before modification ──
-    await this.saveCheckpoint(file, content);
+
 
     // ── Build user prompt ──
     const userPrompt = [
@@ -893,54 +892,5 @@ export class ThreadsProcessorEngine {
     return content.replace(fmRegex, "").trim();
   }
 
-  /**
-   * Save a checkpoint snapshot before modifying the file.
-   */
-  private async saveCheckpoint(
-    file: TFile,
-    content: string
-  ): Promise<void> {
-    try {
-      const checkpointDir = normalizePath(
-        `_checkpoints/${file.basename}`
-      );
-      const existingDir =
-        this.app.vault.getAbstractFileByPath(checkpointDir);
-      if (!existingDir) {
-        await this.app.vault.createFolder(checkpointDir);
-      }
 
-      const now = new Date();
-      const ts = now.toISOString().replace(/[:.]/g, "-");
-      const checkpointPath = normalizePath(
-        `${checkpointDir}/${file.basename}_${ts}.md`
-      );
-
-      const header = [
-        "---",
-        "type: checkpoint",
-        `source: "[[${file.basename}]]"`,
-        `checkpoint_created: ${now.toISOString()}`,
-        `original_path: "${file.path}"`,
-        "---",
-        "",
-        "> [!warning] 此為自動保存的變更檢查點（Checkpoint）",
-        `> 原始檔案：[[${file.basename}]]`,
-        `> 快照時間：${now.toISOString()}`,
-        "",
-        "---",
-        "",
-      ].join("\n");
-
-      await this.app.vault.create(checkpointPath, header + content);
-      console.log(
-        `[ThreadsProcessor] Checkpoint saved: ${checkpointPath}`
-      );
-    } catch (err) {
-      console.warn(
-        "[ThreadsProcessor] Failed to save checkpoint:",
-        err
-      );
-    }
-  }
 }
