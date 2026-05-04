@@ -52,6 +52,14 @@ const THREADS_PROCESSOR_PROMPT = `你是一位精準的 Obsidian 知識管理助
       "description": "2~3句話描述這個主題頁的涵蓋範圍",
       "category": "30_生活與創作"
     }
+  ],
+  "atomic_notes": [
+    {
+      "title": "可獨立存在的原子化知識點名稱",
+      "content": "詳細的知識點或洞見解釋",
+      "tags": ["#標籤1"],
+      "category": "20_學術與電腦科學"
+    }
   ]
 }
 
@@ -100,7 +108,13 @@ const THREADS_PROCESSOR_PROMPT = `你是一位精準的 Obsidian 知識管理助
   - "30_生活與創作"
   - "40_自託管實驗室"
   - "99_未分類"
-- 若 existing_relations 已有合適的 [hub] 頁，new_hubs 必須是空陣列 []`;
+- 若 existing_relations 已有合適的 [hub] 頁，new_hubs 必須是空陣列 []
+
+## atomic_notes 規則
+- 仔細找出內文中是否有可獨立存在的「原子化知識」（例如：特定技巧、專業名詞解釋、框架、概念）。
+- 如果有，將其萃取出來。如果沒有，請回傳空陣列 []。
+- tags 請包含至少一個標籤。
+- category: 必須是以下五個之一："10_工作與管理", "20_學術與電腦科學", "30_生活與創作", "40_自託管實驗室", "99_未分類"。`;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -113,6 +127,12 @@ interface LLMResponse {
   new_hubs?: Array<{
     name: string;
     description: string;
+    category: string;
+  }>;
+  atomic_notes?: Array<{
+    title: string;
+    content: string;
+    tags: string[];
     category: string;
   }>;
 }
@@ -156,13 +176,18 @@ export class ThreadsProcessorEngine {
     await this.consolidateHubs();
 
     // ── Collect all markdown files ──
-    const files = this.getMarkdownFiles(folderPath);
+    const allFiles = this.getMarkdownFiles(folderPath);
+    const files = allFiles.filter(file => {
+      const cache = this.app.metadataCache.getFileCache(file);
+      return cache?.frontmatter?.["threads-processed"] !== true;
+    });
+
     if (files.length === 0) {
-      new Notice(`在「${folderPath}」中找不到任何 Markdown 檔案。`);
+      new Notice(`在「${folderPath}」中找不到需要處理的 Markdown 檔案。`);
       return 0;
     }
 
-    new Notice(`找到 ${files.length} 篇 Threads 帖文，開始批次處理...`);
+    new Notice(`找到 ${files.length} 篇尚未處理的 Threads 帖文，開始批次處理...`);
 
     // ── Build the vault page index ──
     // allBasenames is kept mutable — new hubs are added as they are created.
@@ -181,14 +206,7 @@ export class ThreadsProcessorEngine {
       onProgress?.(i + 1, files.length, file.basename);
 
       try {
-        // Skip files that have already been processed by this engine
         const content = await this.app.vault.read(file);
-        if (content.includes("threads-processed: true")) {
-          console.log(
-            `[ThreadsProcessor] Skipping ${file.basename}: already processed.`
-          );
-          continue;
-        }
 
         // Rebuild the grouped page list each time so newly created hubs are visible
         const groupedPages = this.buildGroupedPageList(folderPath);
@@ -259,7 +277,7 @@ export class ThreadsProcessorEngine {
       return;
     }
 
-    const { title, summary, existing_relations, new_hubs } = parsed;
+    const { title, summary, existing_relations, new_hubs, atomic_notes } = parsed;
 
     // ── Apply changes ──
 
@@ -345,6 +363,35 @@ export class ThreadsProcessorEngine {
       }
     }
 
+    // Generate atomic notes if any
+    let atomicCount = 0;
+    const atomicLinks: string[] = [];
+    if (atomic_notes && atomic_notes.length > 0) {
+      for (const note of atomic_notes) {
+        if (!note.title || !note.content) continue;
+        const safeTitle = note.title.replace(/[\\/:\"*?<>|#^\[\]]/g, "").trim();
+        if (!safeTitle) continue;
+
+        let finalCategory = note.category;
+        if (!VALID_CATEGORIES.includes(finalCategory)) {
+          finalCategory = "99_未分類";
+        }
+
+        const link = await this.createAtomicNote(safeTitle, { content: note.content, tags: note.tags || [] }, finalCategory, file.basename);
+        if (link) {
+          atomicCount++;
+          atomicLinks.push(link);
+        }
+      }
+    }
+
+    if (atomicLinks.length > 0) {
+      appendSection += `\n## 萃取的原子化知識\n\n`;
+      for (const link of atomicLinks) {
+        appendSection += `- ${link}\n`;
+      }
+    }
+
     if (appendSection) {
       const currentContent = await this.app.vault.read(file);
       await this.app.vault.modify(file, currentContent + appendSection);
@@ -365,21 +412,21 @@ export class ThreadsProcessorEngine {
         if (!this.app.vault.getAbstractFileByPath(newPath)) {
           await this.app.vault.rename(file, newPath);
           new Notice(
-            `✅ ${safeName}（${allRelations.length} 個關聯）`
+            `✅ ${safeName}（${allRelations.length} 關聯, ${atomicCount} 原子筆記）`
           );
         } else {
           new Notice(
-            `✅ ${file.basename}（${allRelations.length} 個關聯，名稱重複未改名）`
+            `✅ ${file.basename}（${allRelations.length} 關聯, ${atomicCount} 原子筆記，重複未改名）`
           );
         }
       } else {
         new Notice(
-          `✅ ${file.basename}（${allRelations.length} 個關聯）`
+          `✅ ${file.basename}（${allRelations.length} 關聯, ${atomicCount} 原子筆記）`
         );
       }
     } else {
       new Notice(
-        `✅ ${file.basename}（${allRelations.length} 個關聯）`
+        `✅ ${file.basename}（${allRelations.length} 關聯, ${atomicCount} 原子筆記）`
       );
     }
   }
@@ -763,6 +810,61 @@ export class ThreadsProcessorEngine {
     ].join("\n");
 
     await this.app.vault.create(filePath, content);
+  }
+
+  // ---- Atomic Note Creation ---------------------------------------------------
+
+  /**
+   * Create an atomic note with an ontology-aware back-link to its source note.
+   */
+  private async createAtomicNote(
+    fileName: string, 
+    data: { content: string; tags: string[] },
+    category: string,
+    sourceName: string
+  ): Promise<string | null> {
+    try {
+      const destFolder = normalizePath(category);
+      const abstractFolder = this.app.vault.getAbstractFileByPath(destFolder);
+      if (!abstractFolder) {
+        await this.app.vault.createFolder(destFolder);
+      }
+
+      // Ensure unique filename
+      let attempt = 0;
+      let finalPath = normalizePath(`${category}/${fileName}.md`);
+      while (this.app.vault.getAbstractFileByPath(finalPath)) {
+        attempt++;
+        finalPath = normalizePath(`${category}/${fileName} ${attempt}.md`);
+      }
+
+      const timestamp = new Date().toISOString();
+      const tagsStr = data.tags && data.tags.length > 0 
+        ? `tags:\n  - ${data.tags.map(t => t.replace(/^#/, "")).join("\n  - ")}`
+        : "tags: []";
+
+      // Ontology: maintain bidirectional link back to source note
+      const sourceLink = sourceName ? `來源筆記：[[${sourceName}]]\n\n` : "";
+
+      const fullContent = \`---
+type: atomic-note
+category: \${category}
+\${tagsStr}
+created: \${timestamp}
+---
+\${sourceLink}
+# \${fileName}
+
+\${data.content}
+\`;
+
+      await this.app.vault.create(finalPath, fullContent);
+      return \`[[\${finalPath.replace(".md", "")}|\${fileName}]]\`;
+
+    } catch (err) {
+      console.error("[ThreadsProcessor] Failed to create atomic note:", err);
+      return null;
+    }
   }
 
   // ---- Vault Page Collection ------------------------------------------------
