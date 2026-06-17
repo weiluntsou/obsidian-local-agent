@@ -120,9 +120,16 @@ export class NoteRefinerEngine {
         ? `\n\n【知識庫現有標籤（供參考，請優先選用相關的標籤以增加關連性，亦可自行發明新標籤）：】\n${limitedTags.join(", ")}`
         : "";
 
+      // Find initial related note candidates based on original tags
+      const originalTags = [...ontology.inlineTags, ...ontology.frontmatterTags];
+      const initialRelated = this.findRelatedNotes(file, originalTags, [], file.basename, new Set(), 10);
+      const relatedContext = initialRelated.length > 0
+        ? `\n\n【關聯筆記候選清單（供參考引用，若內容合適，請在輸出中使用 [[筆記名稱]] 進行雙向連結）：】\n${initialRelated.map(t => `- ${t}`).join("\n")}`
+        : "";
+
       new Notice(`正在精修「${file.basename}」...這可能需要一些時間。`);
 
-      const userPromptContext = `【原始標題】：${file.basename}\n\n【筆記內文】：\n${bodyContent}${existingTagsContext}`;
+      const userPromptContext = `【原始標題】：${file.basename}\n\n【筆記內文】：\n${bodyContent}${existingTagsContext}${relatedContext}`;
 
       const rawResponse = await this.apiClient.prompt(
         REFINER_SYSTEM_PROMPT,
@@ -150,8 +157,19 @@ export class NoteRefinerEngine {
         }
       }
 
-      // 2. Build newly refined content
-      const refinedBody = this.buildRefinedContent(parsed, atomicLinks);
+      // 2. Find post-LLM related notes based on new tags/keywords
+      const llmLinks = this.extractWikilinks(rawResponse);
+      const postLlmRelated = this.findRelatedNotes(
+        file,
+        parsed.tags || [],
+        parsed.keywords || [],
+        parsed.suggestedTitle || file.basename,
+        llmLinks,
+        5
+      );
+
+      // 3. Build newly refined content
+      const refinedBody = this.buildRefinedContent(parsed, atomicLinks, postLlmRelated);
 
       // ── Ontology Re-injection: restore any missing wikilinks & tags ──
       const ontologyRestoredBody = this.restoreOntology(refinedBody, ontology);
@@ -230,7 +248,7 @@ export class NoteRefinerEngine {
     }
   }
 
-  private buildRefinedContent(parsed: RefinerResult, atomicLinks: string[]): string {
+  private buildRefinedContent(parsed: RefinerResult, atomicLinks: string[], relatedLinks?: string[]): string {
     const parts: string[] = [];
 
     // 1. Summary Block
@@ -264,6 +282,15 @@ export class NoteRefinerEngine {
       parts.push(`## 原子化概念筆記`);
       for (const link of atomicLinks) {
         parts.push(`- ${link}`);
+      }
+      parts.push(``);
+    }
+
+    // 5. Related Links
+    if (relatedLinks && relatedLinks.length > 0) {
+      parts.push(`## 相關筆記`);
+      for (const link of relatedLinks) {
+        parts.push(`- [[${link}]]`);
       }
       parts.push(``);
     }

@@ -26,7 +26,7 @@ const PILLARS = [
   "99_未分類"
 ];
 
-const ARTICLE_PROCESSOR_PROMPT = `閱讀使用者提供的文章內容（包含原始檔名），並嚴格按照以下五個步驟處理，最終改寫為一個完整的 Markdown（標記語言）格式筆記。
+
 
 ## 步驟零：評估與修改標題（TITLE）
 判斷原始筆記檔名是否能精準概括內文。如果無關或是無意義名稱，請根據內容給出一個 20 字以內的新繁體中文標題。如果原始檔名包含日期資訊（如 2026-04-17），請務必將其保留於新標題中。若原標題已經完美貼切，請沿用。請將最後決定好的標題，放入下一步驟 YAML 區塊的 \`title:\` 欄位。
@@ -451,7 +451,106 @@ ${content}
     }
 
     return parts.join("\n");
+  private getFileTags(file: TFile): string[] {
+    const cache = this.app.metadataCache.getFileCache(file);
+    if (!cache) return [];
+    
+    const tags: string[] = [];
+    
+    // Frontmatter tags
+    if (cache.frontmatter) {
+      const fmTags = cache.frontmatter.tags || cache.frontmatter.tag;
+      if (Array.isArray(fmTags)) {
+        for (const t of fmTags) {
+          if (typeof t === "string") {
+            tags.push(t.replace(/^#/, "").trim());
+          }
+        }
+      } else if (typeof fmTags === "string") {
+        const parts = fmTags.split(/[\s,]+/).map(p => p.replace(/[\[\]"']|#/g, "").trim());
+        tags.push(...parts.filter(Boolean));
+      }
+    }
+    
+    // Inline tags
+    if (cache.tags) {
+      for (const t of cache.tags) {
+        tags.push(t.tag.replace(/^#/, "").trim());
+      }
+    }
+    
+    return Array.from(new Set(tags));
   }
 
+  private findRelatedNotes(
+    currentFile: TFile, 
+    tags: string[], 
+    keywords: { en: string; zh: string }[],
+    suggestedTitle: string,
+    existingLinks: Set<string>,
+    limit: number = 5
+  ): string[] {
+    const allFiles = this.app.vault.getMarkdownFiles();
+    const candidates: { file: TFile; score: number }[] = [];
 
+    const cleanTags = tags.map(t => t.replace(/^#/, "").trim().toLowerCase());
+    const keywordSet = new Set(
+      keywords.flatMap(kw => [kw.en.toLowerCase(), kw.zh.toLowerCase()]).filter(Boolean)
+    );
+    const titleLower = suggestedTitle.toLowerCase();
+
+    for (const f of allFiles) {
+      if (f.path === currentFile.path) continue;
+      // Do not suggest files that are already linked
+      if (existingLinks.has(f.basename)) continue;
+      // Exclude special utility or system files
+      if (f.basename === "plan" || f.basename === "draft" || f.basename.includes("Atomic Note")) continue;
+
+      let score = 0;
+      
+      // Tag-based relation
+      const fTags = this.getFileTags(f).map(t => t.toLowerCase());
+      for (const t of fTags) {
+        if (cleanTags.includes(t)) {
+          score += 10;
+        }
+      }
+
+      // Keyword-based relation
+      const baseLower = f.basename.toLowerCase();
+      for (const kw of keywordSet) {
+        if (baseLower === kw) {
+          score += 20;
+        } else if (baseLower.includes(kw) || kw.includes(baseLower)) {
+          if (baseLower.length >= 2 && kw.length >= 2) {
+            score += 5;
+          }
+        }
+      }
+
+      // Title relation
+      if (titleLower.includes(baseLower) || baseLower.includes(titleLower)) {
+        if (baseLower.length >= 3) {
+          score += 5;
+        }
+      }
+
+      if (score > 0) {
+        candidates.push({ file: f, score });
+      }
+    }
+
+    candidates.sort((a, b) => b.score - a.score);
+    return candidates.slice(0, limit).map(c => c.file.basename);
+  }
+
+  private extractWikilinks(text: string): Set<string> {
+    const wikilinkRegex = /\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g;
+    const links: Set<string> = new Set();
+    let m;
+    while ((m = wikilinkRegex.exec(text)) !== null) {
+      links.add(m[1].trim());
+    }
+    return links;
+  }
 }
