@@ -846,20 +846,20 @@ export class ThreadsProcessorEngine {
       // Ontology: maintain bidirectional link back to source note
       const sourceLink = sourceName ? `來源筆記：[[${sourceName}]]\n\n` : "";
 
-      const fullContent = \`---
+      const fullContent = `---
 type: atomic-note
-category: \${category}
-\${tagsStr}
-created: \${timestamp}
+category: ${category}
+${tagsStr}
+created: ${timestamp}
 ---
-\${sourceLink}
-# \${fileName}
+${sourceLink}
+# ${fileName}
 
-\${data.content}
-\`;
+${data.content}
+`;
 
       await this.app.vault.create(finalPath, fullContent);
-      return \`[[\${finalPath.replace(".md", "")}|\${fileName}]]\`;
+      return `[[${finalPath.replace(".md", "")}|${fileName}]]`;
 
     } catch (err) {
       console.error("[ThreadsProcessor] Failed to create atomic note:", err);

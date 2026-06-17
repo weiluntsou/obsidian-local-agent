@@ -108,7 +108,7 @@ export class NoteRefinerEngine {
       const ontology = this.captureOntology(originalContent);
 
       // Get all existing tags in the vault to help LLM reuse them
-      const allVaultTagsMap = this.app.metadataCache.getTags();
+      const allVaultTagsMap = (this.app.metadataCache as any).getTags() as Record<string, number>;
       const sortedTags = Object.entries(allVaultTagsMap)
         .sort((a, b) => b[1] - a[1]) // Sort by frequency (most used first)
         .map(([tag]) => tag); // e.g. "#tagname"

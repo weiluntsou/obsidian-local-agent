@@ -381,7 +381,8 @@ var REFINER_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u5C08\u696D\u7684\u77E5\u8
 3. \u5728\u9078\u64C7\u91CD\u9EDE\u63D0\u53D6\u6642\u8981\u8A55\u9078\u8B39\u614E\u3002\u5982\u679C\u6574\u7BC7\u6587\u672C\u6BEB\u7121\u50F9\u503C\uFF0C"highlights" \u53EF\u4EE5\u70BA\u7A7A\u3002
 4. "atomicNotes" \u61C9\u53EA\u5305\u542B\u9AD8\u5EA6\u5177\u9AD4\u4E14\u53EF\u91CD\u8907\u4F7F\u7528\u7684\u6D1E\u898B\u3002\u5982\u7121\u4E0D\u540C\u7684\u6982\u5FF5\uFF0C\u4E0D\u5F37\u884C\u5EFA\u7ACB\u3002
 5. \u300C\u6458\u8981\u300D\u3001\u300C\u95DC\u9375\u8A5E\u5F59\u300D\uFF08\u4E2D\u6587\u90E8\u5206\uFF09\u3001\u300C\u91CD\u9EDE\u63D0\u53D6\u300D\u548C\u300C\u539F\u5B50\u5316\u7B46\u8A18.\u5167\u5BB9\u300D\u4E2D\u7684\u6240\u6709\u6587\u672C\u5FC5\u9808\u70BA\u7E41\u9AD4\u4E2D\u6587\uFF08zh-TW\uFF09\u3002
-6. \u4E0D\u53EF\u5305\u542B Markdown \u4EE3\u78BC\u5340\u584A\uFF08markdown fences\uFF09\u3001\u4EE3\u78BC\u7247\u6BB5\u6216 JSON \u7269\u4EF6\u5916\u7684\u4EFB\u4F55\u6587\u5B57\u3002\u5FC5\u9808\u70BA\u6709\u6548\u7684 JSON\uFF08valid JSON\uFF09\u3002`;
+6. \u4E0D\u53EF\u5305\u542B Markdown \u4EE3\u78BC\u5340\u584A\uFF08markdown fences\uFF09\u3001\u4EE3\u78BC\u7247\u6BB5\u6216 JSON \u7269\u4EF6\u5916\u7684\u4EFB\u4F55\u6587\u5B57\u3002\u5FC5\u9808\u70BA\u6709\u6548\u7684 JSON\uFF08valid JSON\uFF09\u3002
+7. \u70BA\u4E86\u589E\u52A0\u77E5\u8B58\u5EAB\u7684\u95DC\u806F\u6027\uFF0C\u8ACB\u53C3\u8003\u8F38\u5165\u4E2D\u63D0\u4F9B\u7684\u300C\u77E5\u8B58\u5EAB\u73FE\u6709\u6A19\u7C64\u300D\u5217\u8868\u3002\u5982\u679C\u5167\u5BB9\u8207\u73FE\u6709\u6A19\u7C64\u76F8\u95DC\uFF0C\u8ACB\u512A\u5148\u9078\u7528\u9019\u4E9B\u5DF2\u5B58\u5728\u7684\u6A19\u7C64\u3002\u82E5\u73FE\u6709\u6A19\u7C64\u7686\u4E0D\u9069\u7528\uFF0C\u65B9\u53EF\u6839\u64DA\u5167\u5BB9\u751F\u6210\u65B0\u7684\u6A19\u7C64\u3002\u6A19\u7C64\u683C\u5F0F\u9808\u4EE5\u300C#\u300D\u958B\u982D\u3002`;
 var NoteRefinerEngine = class {
   constructor(app, apiClient, temperature) {
     this.app = app;
@@ -398,12 +399,19 @@ var NoteRefinerEngine = class {
         return;
       }
       const ontology = this.captureOntology(originalContent);
-      await this.saveCheckpoint(file, originalContent);
+      const allVaultTagsMap = this.app.metadataCache.getTags();
+      const sortedTags = Object.entries(allVaultTagsMap).sort((a, b) => b[1] - a[1]).map(([tag]) => tag);
+      const tagListLimit = 150;
+      const limitedTags = sortedTags.slice(0, tagListLimit);
+      const existingTagsContext = limitedTags.length > 0 ? `
+
+\u3010\u77E5\u8B58\u5EAB\u73FE\u6709\u6A19\u7C64\uFF08\u4F9B\u53C3\u8003\uFF0C\u8ACB\u512A\u5148\u9078\u7528\u76F8\u95DC\u7684\u6A19\u7C64\u4EE5\u589E\u52A0\u95DC\u9023\u6027\uFF0C\u4EA6\u53EF\u81EA\u884C\u767C\u660E\u65B0\u6A19\u7C64\uFF09\uFF1A\u3011
+${limitedTags.join(", ")}` : "";
       new import_obsidian3.Notice(`\u6B63\u5728\u7CBE\u4FEE\u300C${file.basename}\u300D...\u9019\u53EF\u80FD\u9700\u8981\u4E00\u4E9B\u6642\u9593\u3002`);
       const userPromptContext = `\u3010\u539F\u59CB\u6A19\u984C\u3011\uFF1A${file.basename}
 
 \u3010\u7B46\u8A18\u5167\u6587\u3011\uFF1A
-${bodyContent}`;
+${bodyContent}${existingTagsContext}`;
       const rawResponse = await this.apiClient.prompt(
         REFINER_SYSTEM_PROMPT,
         userPromptContext,
@@ -674,47 +682,6 @@ ${data.content}
     }
     return parts.join("\n");
   }
-  // ========================================================================
-  // Change Checkpoint System
-  // ========================================================================
-  /**
-   * Save a full snapshot of the file content before destructive rewriting.
-   * Checkpoints are stored in `_checkpoints/<basename>/` with timestamped
-   * filenames so the user can diff or roll back at any time.
-   */
-  async saveCheckpoint(file, content) {
-    try {
-      const checkpointDir = (0, import_obsidian3.normalizePath)(`_checkpoints/${file.basename}`);
-      const existingDir = this.app.vault.getAbstractFileByPath(checkpointDir);
-      if (!existingDir) {
-        await this.app.vault.createFolder(checkpointDir);
-      }
-      const now = /* @__PURE__ */ new Date();
-      const ts = now.toISOString().replace(/[:.]/g, "-");
-      const checkpointPath = (0, import_obsidian3.normalizePath)(
-        `${checkpointDir}/${file.basename}_${ts}.md`
-      );
-      const header = [
-        "---",
-        "type: checkpoint",
-        `source: "[[${file.basename}]]"`,
-        `checkpoint_created: ${now.toISOString()}`,
-        `original_path: "${file.path}"`,
-        "---",
-        "",
-        "> [!warning] \u6B64\u70BA\u81EA\u52D5\u4FDD\u5B58\u7684\u8B8A\u66F4\u6AA2\u67E5\u9EDE\uFF08Checkpoint\uFF09",
-        `> \u539F\u59CB\u6A94\u6848\uFF1A[[${file.basename}]]`,
-        `> \u5FEB\u7167\u6642\u9593\uFF1A${now.toISOString()}`,
-        "",
-        "---",
-        ""
-      ].join("\n");
-      await this.app.vault.create(checkpointPath, header + content);
-      console.log(`[NoteRefinerEngine] Checkpoint saved: ${checkpointPath}`);
-    } catch (err) {
-      console.warn("[NoteRefinerEngine] Failed to save checkpoint:", err);
-    }
-  }
 };
 
 // src/articleProcessor.ts
@@ -743,7 +710,7 @@ var ARTICLE_PROCESSOR_PROMPT = `\u95B1\u8B80\u4F7F\u7528\u8005\u63D0\u4F9B\u7684
   - 30_\u751F\u6D3B\u8207\u5275\u4F5C\uFF08\u751F\u6D3B\u98F2\u98DF\u3001\u65C5\u904A\u3001\u500B\u4EBA\u8208\u8DA3\uFF09
   - 40_\u81EA\u8A17\u7BA1\u5BE6\u9A57\u5BA4\uFF08\u4F3A\u670D\u5668\u3001Docker \u5BB9\u5668\u5316\uFF08containerization\uFF09\u3001\u81EA\u8A17\u7BA1\uFF08self-hosted\uFF09\u3001\u4EBA\u5DE5\u667A\u6167\uFF08AI\uFF09\u5DE5\u5177\uFF09
   - 99_\u672A\u5206\u985E\uFF08\u7121\u6CD5\u6B78\u985E\u5230\u4EE5\u4E0A\u56DB\u5927\u985E\u5225\u6642\u653E\u9019\u88E1\uFF09
-- tags\uFF08\u6A19\u7C64\uFF09: [\u63D0\u53D6 2-3 \u500B\u8207\u4E3B\u984C\u76F8\u95DC\u7684\u6A19\u7C64\uFF0C\u5FC5\u9808\u5305\u542B #web-clippings\uFF08\u7DB2\u9801\u526A\u8F2F\uFF09\uFF0C\u4E26\u8996\u60C5\u6CC1\u52A0\u4E0A #status/to-process\uFF08\u5F85\u8655\u7406\u72C0\u614B\uFF09\u6216 #status/evergreen\uFF08\u5E38\u9752\u7B46\u8A18\u72C0\u614B\uFF09]
+- tags\uFF08\u6A19\u7C64\uFF09: [\u63D0\u53D6 2-3 \u500B\u8207\u4E3B\u984C\u76F8\u95DC\u7684\u6A19\u7C64\uFF0C\u5FC5\u9808\u5305\u542B #web-clippings\uFF08\u7DB2\u9801\u526A\u8F2F\uFF09\uFF0C\u4E26\u8996\u60C5\u6CC1\u52A0\u4E0A #status/to-process\uFF08\u5F85\u8655\u7406\u72C0\u614B\uFF09\u6216 #status/evergreen\uFF08\u5E38\u9752\u7B46\u8A18\u72C0\u614B\uFF09\u3002\u70BA\u4E86\u589E\u52A0\u77E5\u8B58\u5EAB\u7684\u95DC\u806F\u6027\uFF0C\u8ACB\u53C3\u8003\u8F38\u5165\u4E2D\u63D0\u4F9B\u7684\u300C\u77E5\u8B58\u5EAB\u73FE\u6709\u6A19\u7C64\u300D\u5217\u8868\uFF0C\u512A\u5148\u9078\u7528\u76F8\u95DC\u7684\u5DF2\u5B58\u5728\u6A19\u7C64\u3002\u82E5\u7121\u76F8\u95DC\u6A19\u7C64\uFF0C\u624D\u81EA\u884C\u751F\u6210\u65B0\u6A19\u7C64\u3002]
 
 ## \u6B65\u9A5F\u4E8C\uFF1A\u64B0\u5BEB\u300C\u4E00\u53E5\u8A71\u7E3D\u7D50\uFF08One-Sentence Summary\uFF09\u300D
 \u5728 YAML \u5340\u584A\u4E0B\u65B9\uFF0C\u8ACB\u7528\u4E00\u53E5\u7CBE\u7149\u7684\u8A71\uFF08\u4E0D\u8D85\u904E 50 \u5B57\uFF09\u7E3D\u7D50\u9019\u7BC7\u6587\u7AE0\u7684\u6838\u5FC3\u50F9\u503C\u6216\u89E3\u6C7A\u7684\u554F\u984C\uFF0C\u8B93\u672A\u4F86\u7684\u8B80\u8005\uFF08\u4F7F\u7528\u8005\u672C\u4EBA\uFF09\u80FD\u5728\u4E00\u79D2\u5167\u6C7A\u5B9A\u662F\u5426\u9700\u8981\u7E7C\u7E8C\u95B1\u8B80\u3002
@@ -754,7 +721,7 @@ var ARTICLE_PROCESSOR_PROMPT = `\u95B1\u8B80\u4F7F\u7528\u8005\u63D0\u4F9B\u7684
 ## \u6B65\u9A5F\u56DB\uFF1A\u539F\u5B50\u5316\u6982\u5FF5\u6A19\u8A18\u8207\u7368\u7ACB\u8403\u53D6\uFF08Atomization & Extraction\uFF09
 \u9019\u662F\u6700\u91CD\u8981\u7684\u4E00\u6B65\u3002\u8ACB\u4E3B\u52D5\u8FA8\u8B58\u6587\u7AE0\u4E2D\u51FA\u73FE\u7684\u300C\u7368\u7ACB\u91CD\u8981\u6982\u5FF5\u300D\u3001\u300C\u5C08\u6709\u540D\u8A5E\u300D\u3001\u300C\u6846\u67B6\u300D\u6216\u300C\u6F14\u7B97\u6CD5\u300D\uFF08\u4F8B\u5982\uFF1A\u7279\u5B9A\u7684\u7BA1\u7406\u5DE5\u5177\u3001\u7CFB\u7D71\u67B6\u69CB\u540D\u7A31\u7B49\uFF09\u3002
 1. \u5728\u91CD\u9EDE\u63D0\u53D6\u7684\u6B63\u6587\u4E2D\uFF0C\u5C07\u9019\u4E9B\u8A5E\u5F59\u4F7F\u7528\u96D9\u5C64\u4E2D\u62EC\u865F \`[[ ]]\` \u5305\u8986\u8D77\u4F86\u3002
-2. \u5728\u6574\u4EFD\u7B46\u8A18\u7684\u6700\u672B\u7AEF\uFF0C\u8ACB **\u52D9\u5FC5** \u4F7F\u7528\u4EE5\u4E0B \`<atomic-notes>\` \u7684 XML\uFF08\u5EF6\u6A19\u8A18\u8A9E\u8A00\uFF09\u7D50\u69CB\uFF0C\u70BA\u6BCF\u4E00\u500B\u6A19\u8A18 \`[[ ]]\` \u7684\u5C08\u6709\u540D\u8A5E\u7522\u751F\u7368\u7ACB\u7B46\u8A18\u5167\u5BB9\uFF08\u5305\u542B\u5B9A\u7FA9\u3001\u7528\u9014\u53CA\u95DC\u806F\u6A19\u7C64\uFF09\u3002
+2. \u5728\u6574\u4EFD\u7B46\u8A18\u7684\u6700\u672B\u7AEF\uFF0C\u8ACB **\u52D9\u5FC5** \u4F7F\u7528\u4EE5\u4E0B \`<atomic-notes>\` \u7684 XML\uFF08\u5EF6\u6A19\u8A18\u8A9E\u8A00\uFF09\u7D50\u69CB\uFF0C\u70BA\u6BCF\u4E00\u500B\u6A19\u8A18 \`[[ ]]\` \u7684\u5C08\u6709\u540D\u8A5E\u7522\u751F\u7368\u7ACB\u7B46\u8A18\u5167\u5BB9\uFF08\u5305\u542B\u5B9A\u7FA9\u3001\u7528\u9014\u53CA\u95DC\u806F\u6A19\u7C64\uFF0C\u6A19\u7C64\u4E5F\u8ACB\u512A\u5148\u53C3\u8003\u4E26\u9078\u7528\u300C\u77E5\u8B58\u5EAB\u73FE\u6709\u6A19\u7C64\u300D\u5217\u8868\u4E2D\u7684\u76F8\u95DC\u6A19\u7C64\uFF09\u3002
 
 ---
 # \u8F38\u51FA\u7BC4\u672C\uFF08\u56B4\u683C\u9075\u5FAA\u6B64\u683C\u5F0F\u8F38\u51FA\uFF0C\u4E0D\u8981\u8F38\u51FA\u4EFB\u4F55\u5176\u4ED6\u591A\u9918\u7684\u5C0D\u8A71\u6587\u5B57\uFF09
@@ -797,12 +764,19 @@ var ArticleProcessorEngine = class {
       const sourceUrl = urlMatch ? urlMatch[1] : "";
       const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
       const ontology = this.captureOntology(content);
-      await this.saveCheckpoint(file, content);
+      const allVaultTagsMap = this.app.metadataCache.getTags();
+      const sortedTags = Object.entries(allVaultTagsMap).sort((a, b) => b[1] - a[1]).map(([tag]) => tag);
+      const tagListLimit = 150;
+      const limitedTags = sortedTags.slice(0, tagListLimit);
+      const existingTagsContext = limitedTags.length > 0 ? `
+
+\u3010\u77E5\u8B58\u5EAB\u73FE\u6709\u6A19\u7C64\uFF08\u4F9B\u53C3\u8003\uFF0C\u8ACB\u512A\u5148\u9078\u7528\u76F8\u95DC\u7684\u6A19\u7C64\u4EE5\u589E\u52A0\u95DC\u9023\u6027\uFF0C\u4EA6\u53EF\u81EA\u884C\u767C\u660E\u65B0\u6A19\u7C64\uFF09\uFF1A\u3011
+${limitedTags.join(", ")}` : "";
       const systemPrompt = ARTICLE_PROCESSOR_PROMPT.replace(/\{CAPTURED_DATE\}/g, today).replace(/\{SOURCE_URL\}/g, sourceUrl || "[\u586B\u5BEB\u539F\u6587\u7DB2\u5740\uFF0C\u82E5\u7121\u5247\u7559\u7A7A]");
       const userPromptContext = `\u3010\u539F\u59CB\u6A19\u984C\u3011\uFF1A${file.basename}
 
 \u3010\u6587\u7AE0\u5167\u6587\u3011\uFF1A
-${content}`;
+${content}${existingTagsContext}`;
       new import_obsidian4.Notice(`\u6B63\u5728\u8655\u7406\u6587\u7AE0\u300C${file.basename}\u300D...\u9019\u53EF\u80FD\u9700\u8981\u4E00\u4E9B\u6642\u9593\u3002`);
       const rawResponse = await this.apiClient.prompt(
         systemPrompt,
@@ -1056,47 +1030,6 @@ ${content}
     }
     return parts.join("\n");
   }
-  // ========================================================================
-  // Change Checkpoint System
-  // ========================================================================
-  /**
-   * Save a full snapshot of the file content before destructive rewriting.
-   * Checkpoints are stored in `_checkpoints/<basename>/` with timestamped
-   * filenames so the user can diff or roll back at any time.
-   */
-  async saveCheckpoint(file, content) {
-    try {
-      const checkpointDir = (0, import_obsidian4.normalizePath)(`_checkpoints/${file.basename}`);
-      const existingDir = this.app.vault.getAbstractFileByPath(checkpointDir);
-      if (!existingDir) {
-        await this.app.vault.createFolder(checkpointDir);
-      }
-      const now = /* @__PURE__ */ new Date();
-      const ts = now.toISOString().replace(/[:.]/g, "-");
-      const checkpointPath = (0, import_obsidian4.normalizePath)(
-        `${checkpointDir}/${file.basename}_${ts}.md`
-      );
-      const header = [
-        "---",
-        "type: checkpoint",
-        `source: "[[${file.basename}]]"`,
-        `checkpoint_created: ${now.toISOString()}`,
-        `original_path: "${file.path}"`,
-        "---",
-        "",
-        "> [!warning] \u6B64\u70BA\u81EA\u52D5\u4FDD\u5B58\u7684\u8B8A\u66F4\u6AA2\u67E5\u9EDE\uFF08Checkpoint\uFF09",
-        `> \u539F\u59CB\u6A94\u6848\uFF1A[[${file.basename}]]`,
-        `> \u5FEB\u7167\u6642\u9593\uFF1A${now.toISOString()}`,
-        "",
-        "---",
-        ""
-      ].join("\n");
-      await this.app.vault.create(checkpointPath, header + content);
-      console.log(`[ArticleProcessorEngine] Checkpoint saved: ${checkpointPath}`);
-    } catch (err) {
-      console.warn("[ArticleProcessorEngine] Failed to save checkpoint:", err);
-    }
-  }
 };
 
 // src/threadsProcessor.ts
@@ -1120,6 +1053,14 @@ var THREADS_PROCESSOR_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u7CBE\u6E96\u7684 Obsid
       "name": "\u65B0\u4E3B\u984C\u9801\u540D\u7A31",
       "description": "2~3\u53E5\u8A71\u63CF\u8FF0\u9019\u500B\u4E3B\u984C\u9801\u7684\u6DB5\u84CB\u7BC4\u570D",
       "category": "30_\u751F\u6D3B\u8207\u5275\u4F5C"
+    }
+  ],
+  "atomic_notes": [
+    {
+      "title": "\u53EF\u7368\u7ACB\u5B58\u5728\u7684\u539F\u5B50\u5316\u77E5\u8B58\u9EDE\u540D\u7A31",
+      "content": "\u8A73\u7D30\u7684\u77E5\u8B58\u9EDE\u6216\u6D1E\u898B\u89E3\u91CB",
+      "tags": ["#\u6A19\u7C641"],
+      "category": "20_\u5B78\u8853\u8207\u96FB\u8166\u79D1\u5B78"
     }
   ]
 }
@@ -1169,7 +1110,13 @@ var THREADS_PROCESSOR_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u7CBE\u6E96\u7684 Obsid
   - "30_\u751F\u6D3B\u8207\u5275\u4F5C"
   - "40_\u81EA\u8A17\u7BA1\u5BE6\u9A57\u5BA4"
   - "99_\u672A\u5206\u985E"
-- \u82E5 existing_relations \u5DF2\u6709\u5408\u9069\u7684 [hub] \u9801\uFF0Cnew_hubs \u5FC5\u9808\u662F\u7A7A\u9663\u5217 []`;
+- \u82E5 existing_relations \u5DF2\u6709\u5408\u9069\u7684 [hub] \u9801\uFF0Cnew_hubs \u5FC5\u9808\u662F\u7A7A\u9663\u5217 []
+
+## atomic_notes \u898F\u5247
+- \u4ED4\u7D30\u627E\u51FA\u5167\u6587\u4E2D\u662F\u5426\u6709\u53EF\u7368\u7ACB\u5B58\u5728\u7684\u300C\u539F\u5B50\u5316\u77E5\u8B58\u300D\uFF08\u4F8B\u5982\uFF1A\u7279\u5B9A\u6280\u5DE7\u3001\u5C08\u696D\u540D\u8A5E\u89E3\u91CB\u3001\u6846\u67B6\u3001\u6982\u5FF5\uFF09\u3002
+- \u5982\u679C\u6709\uFF0C\u5C07\u5176\u8403\u53D6\u51FA\u4F86\u3002\u5982\u679C\u6C92\u6709\uFF0C\u8ACB\u56DE\u50B3\u7A7A\u9663\u5217 []\u3002
+- tags \u8ACB\u5305\u542B\u81F3\u5C11\u4E00\u500B\u6A19\u7C64\u3002
+- category: \u5FC5\u9808\u662F\u4EE5\u4E0B\u4E94\u500B\u4E4B\u4E00\uFF1A"10_\u5DE5\u4F5C\u8207\u7BA1\u7406", "20_\u5B78\u8853\u8207\u96FB\u8166\u79D1\u5B78", "30_\u751F\u6D3B\u8207\u5275\u4F5C", "40_\u81EA\u8A17\u7BA1\u5BE6\u9A57\u5BA4", "99_\u672A\u5206\u985E"\u3002`;
 var VALID_CATEGORIES = [
   "10_\u5DE5\u4F5C\u8207\u7BA1\u7406",
   "20_\u5B78\u8853\u8207\u96FB\u8166\u79D1\u5B78",
@@ -1192,12 +1139,17 @@ var ThreadsProcessorEngine = class {
   async processBatch(folderPath, onProgress, shouldCancel) {
     this.createdHubsThisBatch.clear();
     await this.consolidateHubs();
-    const files = this.getMarkdownFiles(folderPath);
+    const allFiles = this.getMarkdownFiles(folderPath);
+    const files = allFiles.filter((file) => {
+      var _a;
+      const cache = this.app.metadataCache.getFileCache(file);
+      return ((_a = cache == null ? void 0 : cache.frontmatter) == null ? void 0 : _a["threads-processed"]) !== true;
+    });
     if (files.length === 0) {
-      new import_obsidian5.Notice(`\u5728\u300C${folderPath}\u300D\u4E2D\u627E\u4E0D\u5230\u4EFB\u4F55 Markdown \u6A94\u6848\u3002`);
+      new import_obsidian5.Notice(`\u5728\u300C${folderPath}\u300D\u4E2D\u627E\u4E0D\u5230\u9700\u8981\u8655\u7406\u7684 Markdown \u6A94\u6848\u3002`);
       return 0;
     }
-    new import_obsidian5.Notice(`\u627E\u5230 ${files.length} \u7BC7 Threads \u5E16\u6587\uFF0C\u958B\u59CB\u6279\u6B21\u8655\u7406...`);
+    new import_obsidian5.Notice(`\u627E\u5230 ${files.length} \u7BC7\u5C1A\u672A\u8655\u7406\u7684 Threads \u5E16\u6587\uFF0C\u958B\u59CB\u6279\u6B21\u8655\u7406...`);
     const allBasenames = this.collectAllBasenames(folderPath);
     let processedCount = 0;
     for (let i = 0; i < files.length; i++) {
@@ -1209,12 +1161,6 @@ var ThreadsProcessorEngine = class {
       onProgress == null ? void 0 : onProgress(i + 1, files.length, file.basename);
       try {
         const content = await this.app.vault.read(file);
-        if (content.includes("threads-processed: true")) {
-          console.log(
-            `[ThreadsProcessor] Skipping ${file.basename}: already processed.`
-          );
-          continue;
-        }
         const groupedPages = this.buildGroupedPageList(folderPath);
         await this.processFile(file, content, groupedPages, allBasenames);
         processedCount++;
@@ -1242,7 +1188,6 @@ var ThreadsProcessorEngine = class {
       );
       return;
     }
-    await this.saveCheckpoint(file, content);
     const userPrompt = [
       `\u3010\u539F\u59CB\u6A94\u540D\u3011\uFF1A${file.basename}`,
       "",
@@ -1265,7 +1210,7 @@ var ThreadsProcessorEngine = class {
       );
       return;
     }
-    const { title, summary, existing_relations, new_hubs } = parsed;
+    const { title, summary, existing_relations, new_hubs, atomic_notes } = parsed;
     await this.app.fileManager.processFrontMatter(file, (fm) => {
       fm["threads-processed"] = true;
       if (title) {
@@ -1334,6 +1279,34 @@ ${summary.trim()}
 `;
       }
     }
+    let atomicCount = 0;
+    const atomicLinks = [];
+    if (atomic_notes && atomic_notes.length > 0) {
+      for (const note of atomic_notes) {
+        if (!note.title || !note.content) continue;
+        const safeTitle = note.title.replace(/[\\/:\"*?<>|#^\[\]]/g, "").trim();
+        if (!safeTitle) continue;
+        let finalCategory = note.category;
+        if (!VALID_CATEGORIES.includes(finalCategory)) {
+          finalCategory = "99_\u672A\u5206\u985E";
+        }
+        const link = await this.createAtomicNote(safeTitle, { content: note.content, tags: note.tags || [] }, finalCategory, file.basename);
+        if (link) {
+          atomicCount++;
+          atomicLinks.push(link);
+        }
+      }
+    }
+    if (atomicLinks.length > 0) {
+      appendSection += `
+## \u8403\u53D6\u7684\u539F\u5B50\u5316\u77E5\u8B58
+
+`;
+      for (const link of atomicLinks) {
+        appendSection += `- ${link}
+`;
+      }
+    }
     if (appendSection) {
       const currentContent = await this.app.vault.read(file);
       await this.app.vault.modify(file, currentContent + appendSection);
@@ -1346,21 +1319,21 @@ ${summary.trim()}
         if (!this.app.vault.getAbstractFileByPath(newPath)) {
           await this.app.vault.rename(file, newPath);
           new import_obsidian5.Notice(
-            `\u2705 ${safeName}\uFF08${allRelations.length} \u500B\u95DC\u806F\uFF09`
+            `\u2705 ${safeName}\uFF08${allRelations.length} \u95DC\u806F, ${atomicCount} \u539F\u5B50\u7B46\u8A18\uFF09`
           );
         } else {
           new import_obsidian5.Notice(
-            `\u2705 ${file.basename}\uFF08${allRelations.length} \u500B\u95DC\u806F\uFF0C\u540D\u7A31\u91CD\u8907\u672A\u6539\u540D\uFF09`
+            `\u2705 ${file.basename}\uFF08${allRelations.length} \u95DC\u806F, ${atomicCount} \u539F\u5B50\u7B46\u8A18\uFF0C\u91CD\u8907\u672A\u6539\u540D\uFF09`
           );
         }
       } else {
         new import_obsidian5.Notice(
-          `\u2705 ${file.basename}\uFF08${allRelations.length} \u500B\u95DC\u806F\uFF09`
+          `\u2705 ${file.basename}\uFF08${allRelations.length} \u95DC\u806F, ${atomicCount} \u539F\u5B50\u7B46\u8A18\uFF09`
         );
       }
     } else {
       new import_obsidian5.Notice(
-        `\u2705 ${file.basename}\uFF08${allRelations.length} \u500B\u95DC\u806F\uFF09`
+        `\u2705 ${file.basename}\uFF08${allRelations.length} \u95DC\u806F, ${atomicCount} \u539F\u5B50\u7B46\u8A18\uFF09`
       );
     }
   }
@@ -1659,6 +1632,47 @@ ${summary.trim()}
     ].join("\n");
     await this.app.vault.create(filePath, content);
   }
+  // ---- Atomic Note Creation ---------------------------------------------------
+  /**
+   * Create an atomic note with an ontology-aware back-link to its source note.
+   */
+  async createAtomicNote(fileName, data, category, sourceName) {
+    try {
+      const destFolder = (0, import_obsidian5.normalizePath)(category);
+      const abstractFolder = this.app.vault.getAbstractFileByPath(destFolder);
+      if (!abstractFolder) {
+        await this.app.vault.createFolder(destFolder);
+      }
+      let attempt = 0;
+      let finalPath = (0, import_obsidian5.normalizePath)(`${category}/${fileName}.md`);
+      while (this.app.vault.getAbstractFileByPath(finalPath)) {
+        attempt++;
+        finalPath = (0, import_obsidian5.normalizePath)(`${category}/${fileName} ${attempt}.md`);
+      }
+      const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+      const tagsStr = data.tags && data.tags.length > 0 ? `tags:
+  - ${data.tags.map((t) => t.replace(/^#/, "")).join("\n  - ")}` : "tags: []";
+      const sourceLink = sourceName ? `\u4F86\u6E90\u7B46\u8A18\uFF1A[[${sourceName}]]
+
+` : "";
+      const fullContent = `---
+type: atomic-note
+category: ${category}
+${tagsStr}
+created: ${timestamp}
+---
+${sourceLink}
+# ${fileName}
+
+${data.content}
+`;
+      await this.app.vault.create(finalPath, fullContent);
+      return `[[${finalPath.replace(".md", "")}|${fileName}]]`;
+    } catch (err) {
+      console.error("[ThreadsProcessor] Failed to create atomic note:", err);
+      return null;
+    }
+  }
   // ---- Vault Page Collection ------------------------------------------------
   /**
    * Collect all vault page basenames (excluding target folder, checkpoints, etc.).
@@ -1752,49 +1766,6 @@ ${summary.trim()}
   stripFrontmatter(content) {
     const fmRegex = /^---\s*\n[\s\S]*?\n---\s*\n?/;
     return content.replace(fmRegex, "").trim();
-  }
-  /**
-   * Save a checkpoint snapshot before modifying the file.
-   */
-  async saveCheckpoint(file, content) {
-    try {
-      const checkpointDir = (0, import_obsidian5.normalizePath)(
-        `_checkpoints/${file.basename}`
-      );
-      const existingDir = this.app.vault.getAbstractFileByPath(checkpointDir);
-      if (!existingDir) {
-        await this.app.vault.createFolder(checkpointDir);
-      }
-      const now = /* @__PURE__ */ new Date();
-      const ts = now.toISOString().replace(/[:.]/g, "-");
-      const checkpointPath = (0, import_obsidian5.normalizePath)(
-        `${checkpointDir}/${file.basename}_${ts}.md`
-      );
-      const header = [
-        "---",
-        "type: checkpoint",
-        `source: "[[${file.basename}]]"`,
-        `checkpoint_created: ${now.toISOString()}`,
-        `original_path: "${file.path}"`,
-        "---",
-        "",
-        "> [!warning] \u6B64\u70BA\u81EA\u52D5\u4FDD\u5B58\u7684\u8B8A\u66F4\u6AA2\u67E5\u9EDE\uFF08Checkpoint\uFF09",
-        `> \u539F\u59CB\u6A94\u6848\uFF1A[[${file.basename}]]`,
-        `> \u5FEB\u7167\u6642\u9593\uFF1A${now.toISOString()}`,
-        "",
-        "---",
-        ""
-      ].join("\n");
-      await this.app.vault.create(checkpointPath, header + content);
-      console.log(
-        `[ThreadsProcessor] Checkpoint saved: ${checkpointPath}`
-      );
-    } catch (err) {
-      console.warn(
-        "[ThreadsProcessor] Failed to save checkpoint:",
-        err
-      );
-    }
   }
 };
 
@@ -2072,10 +2043,9 @@ var CleanerEngine = class {
   }
   async cleanFile(file) {
     var _a;
-    new import_obsidian7.Notice(`\u6B63\u5728\u555F\u52D5\u300C${file.basename}\u300D\u7684 CPR \u4FDD\u7559\u6AA2\u67E5\u9EDE\u6E05\u6383\u4F5C\u696D...`);
+    new import_obsidian7.Notice(`\u6B63\u5728\u555F\u52D5\u300C${file.basename}\u300D\u7684 CPR \u6E05\u6383\u4F5C\u696D...`);
     try {
       const originalContent = await this.app.vault.read(file);
-      await this.saveCheckpoint(file, originalContent);
       const isOrphan = this.checkIfOrphan(file);
       const brokenLinks = this.getBrokenLinks(file);
       const fmRegex = /^---\s*\n[\s\S]*?\n---\s*\n?/;
@@ -2189,31 +2159,6 @@ ${bodyContent}
   getBrokenLinks(file) {
     const unresolved = this.app.metadataCache.unresolvedLinks[file.path] || {};
     return Object.keys(unresolved);
-  }
-  async saveCheckpoint(file, content) {
-    try {
-      const checkpointDir = (0, import_obsidian7.normalizePath)(`_checkpoints/${file.basename}`);
-      const existingDir = this.app.vault.getAbstractFileByPath(checkpointDir);
-      if (!existingDir) {
-        await this.app.vault.createFolder(checkpointDir);
-      }
-      const now = /* @__PURE__ */ new Date();
-      const ts = now.toISOString().replace(/[:.]/g, "-");
-      const checkpointPath = (0, import_obsidian7.normalizePath)(`${checkpointDir}/${file.basename}_${ts}.md`);
-      const header = [
-        "---",
-        "type: checkpoint",
-        `source: "[[${file.basename}]]"`,
-        `checkpoint_created: ${now.toISOString()}`,
-        "---",
-        "",
-        "> [!warning] \u6E05\u6383\u524D\u81EA\u52D5\u4FDD\u5B58\u7684\u8B8A\u66F4\u6AA2\u67E5\u9EDE\uFF08Snapshot\uFF09",
-        ""
-      ].join("\n");
-      await this.app.vault.create(checkpointPath, header + content);
-    } catch (err) {
-      console.warn("[CleanerEngine] Failed to save checkpoint:", err);
-    }
   }
 };
 
