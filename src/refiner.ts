@@ -74,7 +74,7 @@ const REFINER_SYSTEM_PROMPT = `你是一位專業的知識精修與摘要引擎�
 4. "atomicNotes" 應只包含高度具體且可重複使用的洞見。如無不同的概念，不強行建立。
 5. 「摘要」、「關鍵詞彙」（中文部分）、「重點提取」和「原子化筆記.內容」中的所有文本必須為繁體中文（zh-TW）。
 7. 為了增加知識庫的關聯性，請參考輸入中提供的「知識庫現有標籤」列表。如果內容與現有標籤相關，請優先選用這些已存在的標籤。若現有標籤皆不適用，方可根據內容生成新的標籤。標籤格式須以「#」開頭。
-8. 請參考輸入中的「關聯筆記候選清單」。若在撰寫「摘要」、「重點提取」或「原子化概念」內容時提到候選清單中的概念或頁面，請使用雙層括號 `[[筆記名稱]]`（例如 [[Docker]]）進行雙向連結，建立知識網路。`;
+8. 請參考輸入中的「關聯筆記候選清單」。若在撰寫「摘要」、「重點提取」或「原子化概念」內容時提到候選清單中的概念或頁面，請使用雙層括號 '[[筆記名稱]]'（例如 [[Docker]]）進行雙向連結，建立知識網路。`;
 
 interface RefinerResult {
   suggestedTitle: string;
@@ -504,6 +504,8 @@ ${data.content}
     }
 
     return parts.join("\n");
+  }
+
   private getFileTags(file: TFile): string[] {
     const cache = this.app.metadataCache.getFileCache(file);
     if (!cache) return [];

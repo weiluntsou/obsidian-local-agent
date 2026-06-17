@@ -117,11 +117,18 @@ export class ArticleProcessorEngine {
         ? `\n\n【知識庫現有標籤（供參考，請優先選用相關的標籤以增加關連性，亦可自行發明新標籤）：】\n${limitedTags.join(", ")}`
         : "";
 
+      // Find initial related note candidates based on original tags
+      const originalTags = [...ontology.inlineTags, ...ontology.frontmatterTags];
+      const initialRelated = this.findRelatedNotes(file, originalTags, [], file.basename, new Set(), 10);
+      const relatedContext = initialRelated.length > 0
+        ? `\n\n【關聯筆記候選清單（供參考引用，若內容合適，請在輸出中使用 [[筆記名稱]] 進行雙向連結）：】\n${initialRelated.map(t => `- ${t}`).join("\n")}`
+        : "";
+
       const systemPrompt = ARTICLE_PROCESSOR_PROMPT
           .replace(/\{CAPTURED_DATE\}/g, today)
           .replace(/\{SOURCE_URL\}/g, sourceUrl || "[填寫原文網址，若無則留空]");
 
-      const userPromptContext = `【原始標題】：${file.basename}\n\n【文章內文】：\n${content}${existingTagsContext}`;
+      const userPromptContext = `【原始標題】：${file.basename}\n\n【文章內文】：\n${content}${existingTagsContext}${relatedContext}`;
 
       new Notice(`正在處理文章「${file.basename}」...這可能需要一些時間。`);
 
@@ -203,6 +210,40 @@ export class ArticleProcessorEngine {
       // ── Ontology Re-injection: restore any missing wikilinks & tags ──
       const ontologyRestoredBody = this.restoreOntology(finalBody, ontology);
 
+      // Extract title from LLM frontmatter to use in search
+      let searchTitle = file.basename;
+      const titleMatch = llmFmString.match(/title:\s*(.+)/i);
+      if (titleMatch) {
+         searchTitle = titleMatch[1].replace(/["']/g, "").trim();
+      }
+
+      // Extract tags from LLM frontmatter
+      const tagsMatch = llmFmString.match(/tags:\s*(.+)/i);
+      let rawTags: string[] = [];
+      if (tagsMatch) {
+         rawTags = tagsMatch[1]
+            .replace(/[\[\]"',]/g, " ")
+            .split(/\s+/)
+            .filter(t => t.length > 0)
+            .map(t => t.replace(/^#/, ""));
+      }
+
+      // Find post-LLM related notes
+      const llmLinks = this.extractWikilinks(rawResponse);
+      const postLlmRelated = this.findRelatedNotes(
+        file,
+        rawTags,
+        [],
+        searchTitle,
+        llmLinks,
+        5
+      );
+
+      let relatedSection = "";
+      if (postLlmRelated.length > 0) {
+          relatedSection = "\n\n## 相關筆記\n" + postLlmRelated.map(link => `- [[${link}]]`).join("\n") + "\n";
+      }
+
       // Get original frontmatter
       const originalFmMatch = content.match(/^---\n([\s\S]*?)\n---/);
       const originalFmFull = originalFmMatch ? originalFmMatch[0] + "\n" : "";
@@ -217,8 +258,8 @@ export class ArticleProcessorEngine {
           imagesSection = "\n\n## 原始附圖（保留的圖像）\n" + uniqueImages.join("\n\n") + "\n";
       }
 
-      // Overwrite file with Original Frontmatter + LLM Body + Saved Images
-      await this.app.vault.modify(file, originalFmFull + ontologyRestoredBody + imagesSection);
+      // Overwrite file with Original Frontmatter + LLM Body + Related Section + Saved Images
+      await this.app.vault.modify(file, originalFmFull + ontologyRestoredBody + relatedSection + imagesSection);
 
       // Now merge newly discovered properties safely using Obsidian API
       let suggestedTitle = file.basename;
@@ -451,6 +492,8 @@ ${content}
     }
 
     return parts.join("\n");
+  }
+
   private getFileTags(file: TFile): string[] {
     const cache = this.app.metadataCache.getFileCache(file);
     if (!cache) return [];

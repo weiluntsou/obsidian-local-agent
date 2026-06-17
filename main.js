@@ -381,8 +381,8 @@ var REFINER_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u5C08\u696D\u7684\u77E5\u8
 3. \u5728\u9078\u64C7\u91CD\u9EDE\u63D0\u53D6\u6642\u8981\u8A55\u9078\u8B39\u614E\u3002\u5982\u679C\u6574\u7BC7\u6587\u672C\u6BEB\u7121\u50F9\u503C\uFF0C"highlights" \u53EF\u4EE5\u70BA\u7A7A\u3002
 4. "atomicNotes" \u61C9\u53EA\u5305\u542B\u9AD8\u5EA6\u5177\u9AD4\u4E14\u53EF\u91CD\u8907\u4F7F\u7528\u7684\u6D1E\u898B\u3002\u5982\u7121\u4E0D\u540C\u7684\u6982\u5FF5\uFF0C\u4E0D\u5F37\u884C\u5EFA\u7ACB\u3002
 5. \u300C\u6458\u8981\u300D\u3001\u300C\u95DC\u9375\u8A5E\u5F59\u300D\uFF08\u4E2D\u6587\u90E8\u5206\uFF09\u3001\u300C\u91CD\u9EDE\u63D0\u53D6\u300D\u548C\u300C\u539F\u5B50\u5316\u7B46\u8A18.\u5167\u5BB9\u300D\u4E2D\u7684\u6240\u6709\u6587\u672C\u5FC5\u9808\u70BA\u7E41\u9AD4\u4E2D\u6587\uFF08zh-TW\uFF09\u3002
-6. \u4E0D\u53EF\u5305\u542B Markdown \u4EE3\u78BC\u5340\u584A\uFF08markdown fences\uFF09\u3001\u4EE3\u78BC\u7247\u6BB5\u6216 JSON \u7269\u4EF6\u5916\u7684\u4EFB\u4F55\u6587\u5B57\u3002\u5FC5\u9808\u70BA\u6709\u6548\u7684 JSON\uFF08valid JSON\uFF09\u3002
-7. \u70BA\u4E86\u589E\u52A0\u77E5\u8B58\u5EAB\u7684\u95DC\u806F\u6027\uFF0C\u8ACB\u53C3\u8003\u8F38\u5165\u4E2D\u63D0\u4F9B\u7684\u300C\u77E5\u8B58\u5EAB\u73FE\u6709\u6A19\u7C64\u300D\u5217\u8868\u3002\u5982\u679C\u5167\u5BB9\u8207\u73FE\u6709\u6A19\u7C64\u76F8\u95DC\uFF0C\u8ACB\u512A\u5148\u9078\u7528\u9019\u4E9B\u5DF2\u5B58\u5728\u7684\u6A19\u7C64\u3002\u82E5\u73FE\u6709\u6A19\u7C64\u7686\u4E0D\u9069\u7528\uFF0C\u65B9\u53EF\u6839\u64DA\u5167\u5BB9\u751F\u6210\u65B0\u7684\u6A19\u7C64\u3002\u6A19\u7C64\u683C\u5F0F\u9808\u4EE5\u300C#\u300D\u958B\u982D\u3002`;
+7. \u70BA\u4E86\u589E\u52A0\u77E5\u8B58\u5EAB\u7684\u95DC\u806F\u6027\uFF0C\u8ACB\u53C3\u8003\u8F38\u5165\u4E2D\u63D0\u4F9B\u7684\u300C\u77E5\u8B58\u5EAB\u73FE\u6709\u6A19\u7C64\u300D\u5217\u8868\u3002\u5982\u679C\u5167\u5BB9\u8207\u73FE\u6709\u6A19\u7C64\u76F8\u95DC\uFF0C\u8ACB\u512A\u5148\u9078\u7528\u9019\u4E9B\u5DF2\u5B58\u5728\u7684\u6A19\u7C64\u3002\u82E5\u73FE\u6709\u6A19\u7C64\u7686\u4E0D\u9069\u7528\uFF0C\u65B9\u53EF\u6839\u64DA\u5167\u5BB9\u751F\u6210\u65B0\u7684\u6A19\u7C64\u3002\u6A19\u7C64\u683C\u5F0F\u9808\u4EE5\u300C#\u300D\u958B\u982D\u3002
+8. \u8ACB\u53C3\u8003\u8F38\u5165\u4E2D\u7684\u300C\u95DC\u806F\u7B46\u8A18\u5019\u9078\u6E05\u55AE\u300D\u3002\u82E5\u5728\u64B0\u5BEB\u300C\u6458\u8981\u300D\u3001\u300C\u91CD\u9EDE\u63D0\u53D6\u300D\u6216\u300C\u539F\u5B50\u5316\u6982\u5FF5\u300D\u5167\u5BB9\u6642\u63D0\u5230\u5019\u9078\u6E05\u55AE\u4E2D\u7684\u6982\u5FF5\u6216\u9801\u9762\uFF0C\u8ACB\u4F7F\u7528\u96D9\u5C64\u62EC\u865F '[[\u7B46\u8A18\u540D\u7A31]]'\uFF08\u4F8B\u5982 [[Docker]]\uFF09\u9032\u884C\u96D9\u5411\u9023\u7D50\uFF0C\u5EFA\u7ACB\u77E5\u8B58\u7DB2\u8DEF\u3002`;
 var NoteRefinerEngine = class {
   constructor(app, apiClient, temperature) {
     this.app = app;
@@ -407,11 +407,17 @@ var NoteRefinerEngine = class {
 
 \u3010\u77E5\u8B58\u5EAB\u73FE\u6709\u6A19\u7C64\uFF08\u4F9B\u53C3\u8003\uFF0C\u8ACB\u512A\u5148\u9078\u7528\u76F8\u95DC\u7684\u6A19\u7C64\u4EE5\u589E\u52A0\u95DC\u9023\u6027\uFF0C\u4EA6\u53EF\u81EA\u884C\u767C\u660E\u65B0\u6A19\u7C64\uFF09\uFF1A\u3011
 ${limitedTags.join(", ")}` : "";
+      const originalTags = [...ontology.inlineTags, ...ontology.frontmatterTags];
+      const initialRelated = this.findRelatedNotes(file, originalTags, [], file.basename, /* @__PURE__ */ new Set(), 10);
+      const relatedContext = initialRelated.length > 0 ? `
+
+\u3010\u95DC\u806F\u7B46\u8A18\u5019\u9078\u6E05\u55AE\uFF08\u4F9B\u53C3\u8003\u5F15\u7528\uFF0C\u82E5\u5167\u5BB9\u5408\u9069\uFF0C\u8ACB\u5728\u8F38\u51FA\u4E2D\u4F7F\u7528 [[\u7B46\u8A18\u540D\u7A31]] \u9032\u884C\u96D9\u5411\u9023\u7D50\uFF09\uFF1A\u3011
+${initialRelated.map((t) => `- ${t}`).join("\n")}` : "";
       new import_obsidian3.Notice(`\u6B63\u5728\u7CBE\u4FEE\u300C${file.basename}\u300D...\u9019\u53EF\u80FD\u9700\u8981\u4E00\u4E9B\u6642\u9593\u3002`);
       const userPromptContext = `\u3010\u539F\u59CB\u6A19\u984C\u3011\uFF1A${file.basename}
 
 \u3010\u7B46\u8A18\u5167\u6587\u3011\uFF1A
-${bodyContent}${existingTagsContext}`;
+${bodyContent}${existingTagsContext}${relatedContext}`;
       const rawResponse = await this.apiClient.prompt(
         REFINER_SYSTEM_PROMPT,
         userPromptContext,
@@ -433,7 +439,16 @@ ${bodyContent}${existingTagsContext}`;
           }
         }
       }
-      const refinedBody = this.buildRefinedContent(parsed, atomicLinks);
+      const llmLinks = this.extractWikilinks(rawResponse);
+      const postLlmRelated = this.findRelatedNotes(
+        file,
+        parsed.tags || [],
+        parsed.keywords || [],
+        parsed.suggestedTitle || file.basename,
+        llmLinks,
+        5
+      );
+      const refinedBody = this.buildRefinedContent(parsed, atomicLinks, postLlmRelated);
       const ontologyRestoredBody = this.restoreOntology(refinedBody, ontology);
       let finalCategory = parsed.category;
       if (!PILLARS2.includes(finalCategory)) {
@@ -487,7 +502,7 @@ ${bodyContent}${existingTagsContext}`;
       new import_obsidian3.Notice(`\u7CBE\u4FEE\u5931\u6557\uFF1A${err.message}`);
     }
   }
-  buildRefinedContent(parsed, atomicLinks) {
+  buildRefinedContent(parsed, atomicLinks, relatedLinks) {
     const parts = [];
     parts.push(`> [!summary] \u6458\u8981`);
     parts.push(`> ${parsed.summary.replace(/\\n/g, "\\n> ")}`);
@@ -513,6 +528,13 @@ ${bodyContent}${existingTagsContext}`;
       parts.push(`## \u539F\u5B50\u5316\u6982\u5FF5\u7B46\u8A18`);
       for (const link of atomicLinks) {
         parts.push(`- ${link}`);
+      }
+      parts.push(``);
+    }
+    if (relatedLinks && relatedLinks.length > 0) {
+      parts.push(`## \u76F8\u95DC\u7B46\u8A18`);
+      for (const link of relatedLinks) {
+        parts.push(`- [[${link}]]`);
       }
       parts.push(``);
     }
@@ -682,6 +704,80 @@ ${data.content}
     }
     return parts.join("\n");
   }
+  getFileTags(file) {
+    const cache = this.app.metadataCache.getFileCache(file);
+    if (!cache) return [];
+    const tags = [];
+    if (cache.frontmatter) {
+      const fmTags = cache.frontmatter.tags || cache.frontmatter.tag;
+      if (Array.isArray(fmTags)) {
+        for (const t of fmTags) {
+          if (typeof t === "string") {
+            tags.push(t.replace(/^#/, "").trim());
+          }
+        }
+      } else if (typeof fmTags === "string") {
+        const parts = fmTags.split(/[\s,]+/).map((p) => p.replace(/[\[\]"']|#/g, "").trim());
+        tags.push(...parts.filter(Boolean));
+      }
+    }
+    if (cache.tags) {
+      for (const t of cache.tags) {
+        tags.push(t.tag.replace(/^#/, "").trim());
+      }
+    }
+    return Array.from(new Set(tags));
+  }
+  findRelatedNotes(currentFile, tags, keywords, suggestedTitle, existingLinks, limit = 5) {
+    const allFiles = this.app.vault.getMarkdownFiles();
+    const candidates = [];
+    const cleanTags = tags.map((t) => t.replace(/^#/, "").trim().toLowerCase());
+    const keywordSet = new Set(
+      keywords.flatMap((kw) => [kw.en.toLowerCase(), kw.zh.toLowerCase()]).filter(Boolean)
+    );
+    const titleLower = suggestedTitle.toLowerCase();
+    for (const f of allFiles) {
+      if (f.path === currentFile.path) continue;
+      if (existingLinks.has(f.basename)) continue;
+      if (f.basename === "plan" || f.basename === "draft" || f.basename.includes("Atomic Note")) continue;
+      let score = 0;
+      const fTags = this.getFileTags(f).map((t) => t.toLowerCase());
+      for (const t of fTags) {
+        if (cleanTags.includes(t)) {
+          score += 10;
+        }
+      }
+      const baseLower = f.basename.toLowerCase();
+      for (const kw of keywordSet) {
+        if (baseLower === kw) {
+          score += 20;
+        } else if (baseLower.includes(kw) || kw.includes(baseLower)) {
+          if (baseLower.length >= 2 && kw.length >= 2) {
+            score += 5;
+          }
+        }
+      }
+      if (titleLower.includes(baseLower) || baseLower.includes(titleLower)) {
+        if (baseLower.length >= 3) {
+          score += 5;
+        }
+      }
+      if (score > 0) {
+        candidates.push({ file: f, score });
+      }
+    }
+    candidates.sort((a, b) => b.score - a.score);
+    return candidates.slice(0, limit).map((c) => c.file.basename);
+  }
+  extractWikilinks(text) {
+    const wikilinkRegex = /\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g;
+    const links = /* @__PURE__ */ new Set();
+    let m;
+    while ((m = wikilinkRegex.exec(text)) !== null) {
+      links.add(m[1].trim());
+    }
+    return links;
+  }
 };
 
 // src/articleProcessor.ts
@@ -695,6 +791,7 @@ var PILLARS3 = [
 ];
 var ARTICLE_PROCESSOR_PROMPT = `\u95B1\u8B80\u4F7F\u7528\u8005\u63D0\u4F9B\u7684\u6587\u7AE0\u5167\u5BB9\uFF08\u5305\u542B\u539F\u59CB\u6A94\u540D\uFF09\uFF0C\u4E26\u56B4\u683C\u6309\u7167\u4EE5\u4E0B\u4E94\u500B\u6B65\u9A5F\u8655\u7406\uFF0C\u6700\u7D42\u6539\u5BEB\u70BA\u4E00\u500B\u5B8C\u6574\u7684 Markdown\uFF08\u6A19\u8A18\u8A9E\u8A00\uFF09\u683C\u5F0F\u7B46\u8A18\u3002
 
+\u8ACB\u53C3\u8003\u8F38\u5165\u4E2D\u7684\u300C\u95DC\u806F\u7B46\u8A18\u5019\u9078\u6E05\u55AE\u300D\u3002\u5728\u64B0\u5BEB\u91CD\u9EDE\u63D0\u53D6\u6216\u6B63\u6587\u5167\u5BB9\u6642\uFF0C\u82E5\u63D0\u5230\u5019\u9078\u6E05\u55AE\u4E2D\u5DF2\u6709\u7684\u6982\u5FF5\u6216\u9801\u9762\uFF0C\u8ACB\u52D9\u5FC5\u4F7F\u7528\u96D9\u5411\u9023\u7D50\u8A9E\u6CD5 \`[[\u7B46\u8A18\u540D\u7A31]]\`\uFF08\u4F8B\u5982 [[Docker]]\uFF09\u5C07\u5176\u9023\u7D50\u8D77\u4F86\uFF0C\u4EE5\u589E\u52A0\u95DC\u9023\u6027\u3002
 ## \u6B65\u9A5F\u96F6\uFF1A\u8A55\u4F30\u8207\u4FEE\u6539\u6A19\u984C\uFF08TITLE\uFF09
 \u5224\u65B7\u539F\u59CB\u7B46\u8A18\u6A94\u540D\u662F\u5426\u80FD\u7CBE\u6E96\u6982\u62EC\u5167\u6587\u3002\u5982\u679C\u7121\u95DC\u6216\u662F\u7121\u610F\u7FA9\u540D\u7A31\uFF0C\u8ACB\u6839\u64DA\u5167\u5BB9\u7D66\u51FA\u4E00\u500B 20 \u5B57\u4EE5\u5167\u7684\u65B0\u7E41\u9AD4\u4E2D\u6587\u6A19\u984C\u3002\u5982\u679C\u539F\u59CB\u6A94\u540D\u5305\u542B\u65E5\u671F\u8CC7\u8A0A\uFF08\u5982 2026-04-17\uFF09\uFF0C\u8ACB\u52D9\u5FC5\u5C07\u5176\u4FDD\u7559\u65BC\u65B0\u6A19\u984C\u4E2D\u3002\u82E5\u539F\u6A19\u984C\u5DF2\u7D93\u5B8C\u7F8E\u8CBC\u5207\uFF0C\u8ACB\u6CBF\u7528\u3002\u8ACB\u5C07\u6700\u5F8C\u6C7A\u5B9A\u597D\u7684\u6A19\u984C\uFF0C\u653E\u5165\u4E0B\u4E00\u6B65\u9A5F YAML \u5340\u584A\u7684 \`title:\` \u6B04\u4F4D\u3002
 
@@ -772,11 +869,17 @@ var ArticleProcessorEngine = class {
 
 \u3010\u77E5\u8B58\u5EAB\u73FE\u6709\u6A19\u7C64\uFF08\u4F9B\u53C3\u8003\uFF0C\u8ACB\u512A\u5148\u9078\u7528\u76F8\u95DC\u7684\u6A19\u7C64\u4EE5\u589E\u52A0\u95DC\u9023\u6027\uFF0C\u4EA6\u53EF\u81EA\u884C\u767C\u660E\u65B0\u6A19\u7C64\uFF09\uFF1A\u3011
 ${limitedTags.join(", ")}` : "";
+      const originalTags = [...ontology.inlineTags, ...ontology.frontmatterTags];
+      const initialRelated = this.findRelatedNotes(file, originalTags, [], file.basename, /* @__PURE__ */ new Set(), 10);
+      const relatedContext = initialRelated.length > 0 ? `
+
+\u3010\u95DC\u806F\u7B46\u8A18\u5019\u9078\u6E05\u55AE\uFF08\u4F9B\u53C3\u8003\u5F15\u7528\uFF0C\u82E5\u5167\u5BB9\u5408\u9069\uFF0C\u8ACB\u5728\u8F38\u51FA\u4E2D\u4F7F\u7528 [[\u7B46\u8A18\u540D\u7A31]] \u9032\u884C\u96D9\u5411\u9023\u7D50\uFF09\uFF1A\u3011
+${initialRelated.map((t) => `- ${t}`).join("\n")}` : "";
       const systemPrompt = ARTICLE_PROCESSOR_PROMPT.replace(/\{CAPTURED_DATE\}/g, today).replace(/\{SOURCE_URL\}/g, sourceUrl || "[\u586B\u5BEB\u539F\u6587\u7DB2\u5740\uFF0C\u82E5\u7121\u5247\u7559\u7A7A]");
       const userPromptContext = `\u3010\u539F\u59CB\u6A19\u984C\u3011\uFF1A${file.basename}
 
 \u3010\u6587\u7AE0\u5167\u6587\u3011\uFF1A
-${content}${existingTagsContext}`;
+${content}${existingTagsContext}${relatedContext}`;
       new import_obsidian4.Notice(`\u6B63\u5728\u8655\u7406\u6587\u7AE0\u300C${file.basename}\u300D...\u9019\u53EF\u80FD\u9700\u8981\u4E00\u4E9B\u6642\u9593\u3002`);
       const rawResponse = await this.apiClient.prompt(
         systemPrompt,
@@ -836,6 +939,29 @@ ${content}${existingTagsContext}`;
       const llmFmString = llmFmMatch ? llmFmMatch[1] : "";
       const finalBody = finalMarkdown.replace(/^---\n[\s\S]*?\n---\n*/, "").trim();
       const ontologyRestoredBody = this.restoreOntology(finalBody, ontology);
+      let searchTitle = file.basename;
+      const titleMatch = llmFmString.match(/title:\s*(.+)/i);
+      if (titleMatch) {
+        searchTitle = titleMatch[1].replace(/["']/g, "").trim();
+      }
+      const tagsMatch = llmFmString.match(/tags:\s*(.+)/i);
+      let rawTags = [];
+      if (tagsMatch) {
+        rawTags = tagsMatch[1].replace(/[\[\]"',]/g, " ").split(/\s+/).filter((t) => t.length > 0).map((t) => t.replace(/^#/, ""));
+      }
+      const llmLinks = this.extractWikilinks(rawResponse);
+      const postLlmRelated = this.findRelatedNotes(
+        file,
+        rawTags,
+        [],
+        searchTitle,
+        llmLinks,
+        5
+      );
+      let relatedSection = "";
+      if (postLlmRelated.length > 0) {
+        relatedSection = "\n\n## \u76F8\u95DC\u7B46\u8A18\n" + postLlmRelated.map((link) => `- [[${link}]]`).join("\n") + "\n";
+      }
       const originalFmMatch = content.match(/^---\n([\s\S]*?)\n---/);
       const originalFmFull = originalFmMatch ? originalFmMatch[0] + "\n" : "";
       const imageRegex = /<img\s+[^>]*src="[^"]+"[^>]*>|!\[.*?\]\(.*?\)|\!\[\[.*?\]\]/gi;
@@ -845,7 +971,7 @@ ${content}${existingTagsContext}`;
       if (uniqueImages.length > 0) {
         imagesSection = "\n\n## \u539F\u59CB\u9644\u5716\uFF08\u4FDD\u7559\u7684\u5716\u50CF\uFF09\n" + uniqueImages.join("\n\n") + "\n";
       }
-      await this.app.vault.modify(file, originalFmFull + ontologyRestoredBody + imagesSection);
+      await this.app.vault.modify(file, originalFmFull + ontologyRestoredBody + relatedSection + imagesSection);
       let suggestedTitle = file.basename;
       await this.app.fileManager.processFrontMatter(file, (fm) => {
         for (const [key, value] of Object.entries(ontology.preservedFrontmatter)) {
@@ -853,22 +979,22 @@ ${content}${existingTagsContext}`;
             fm[key] = value;
           }
         }
-        const titleMatch = llmFmString.match(/title:\s*(.+)/i);
-        if (titleMatch) {
-          suggestedTitle = titleMatch[1].replace(/["']/g, "").trim();
+        const titleMatch2 = llmFmString.match(/title:\s*(.+)/i);
+        if (titleMatch2) {
+          suggestedTitle = titleMatch2[1].replace(/["']/g, "").trim();
           fm["title"] = suggestedTitle;
         }
         fm["type"] = "reference";
         fm["captured"] = today;
         if (sourceUrl) fm["source"] = sourceUrl;
         if (finalCategory) fm["category"] = finalCategory;
-        const tagsMatch = llmFmString.match(/tags:\s*(.+)/i);
-        let rawTags = [];
-        if (tagsMatch) {
-          rawTags = tagsMatch[1].replace(/[\[\]"',]/g, " ").split(/\s+/).filter((t) => t.length > 0 && t !== "#web-clippings").map((t) => t.replace(/^#/, ""));
+        const tagsMatch2 = llmFmString.match(/tags:\s*(.+)/i);
+        let rawTags2 = [];
+        if (tagsMatch2) {
+          rawTags2 = tagsMatch2[1].replace(/[\[\]"',]/g, " ").split(/\s+/).filter((t) => t.length > 0 && t !== "#web-clippings").map((t) => t.replace(/^#/, ""));
         }
         const existingTags = Array.isArray(fm["tags"]) ? fm["tags"].map((t) => t.replace(/^#/, "")) : [];
-        fm["tags"] = Array.from(/* @__PURE__ */ new Set([...existingTags, ...rawTags, ...ontology.frontmatterTags, "web-clippings"]));
+        fm["tags"] = Array.from(/* @__PURE__ */ new Set([...existingTags, ...rawTags2, ...ontology.frontmatterTags, "web-clippings"]));
       });
       if (finalCategory) {
         await this.moveFileToCategory(file, finalCategory);
@@ -1029,6 +1155,80 @@ ${content}
       parts.push("");
     }
     return parts.join("\n");
+  }
+  getFileTags(file) {
+    const cache = this.app.metadataCache.getFileCache(file);
+    if (!cache) return [];
+    const tags = [];
+    if (cache.frontmatter) {
+      const fmTags = cache.frontmatter.tags || cache.frontmatter.tag;
+      if (Array.isArray(fmTags)) {
+        for (const t of fmTags) {
+          if (typeof t === "string") {
+            tags.push(t.replace(/^#/, "").trim());
+          }
+        }
+      } else if (typeof fmTags === "string") {
+        const parts = fmTags.split(/[\s,]+/).map((p) => p.replace(/[\[\]"']|#/g, "").trim());
+        tags.push(...parts.filter(Boolean));
+      }
+    }
+    if (cache.tags) {
+      for (const t of cache.tags) {
+        tags.push(t.tag.replace(/^#/, "").trim());
+      }
+    }
+    return Array.from(new Set(tags));
+  }
+  findRelatedNotes(currentFile, tags, keywords, suggestedTitle, existingLinks, limit = 5) {
+    const allFiles = this.app.vault.getMarkdownFiles();
+    const candidates = [];
+    const cleanTags = tags.map((t) => t.replace(/^#/, "").trim().toLowerCase());
+    const keywordSet = new Set(
+      keywords.flatMap((kw) => [kw.en.toLowerCase(), kw.zh.toLowerCase()]).filter(Boolean)
+    );
+    const titleLower = suggestedTitle.toLowerCase();
+    for (const f of allFiles) {
+      if (f.path === currentFile.path) continue;
+      if (existingLinks.has(f.basename)) continue;
+      if (f.basename === "plan" || f.basename === "draft" || f.basename.includes("Atomic Note")) continue;
+      let score = 0;
+      const fTags = this.getFileTags(f).map((t) => t.toLowerCase());
+      for (const t of fTags) {
+        if (cleanTags.includes(t)) {
+          score += 10;
+        }
+      }
+      const baseLower = f.basename.toLowerCase();
+      for (const kw of keywordSet) {
+        if (baseLower === kw) {
+          score += 20;
+        } else if (baseLower.includes(kw) || kw.includes(baseLower)) {
+          if (baseLower.length >= 2 && kw.length >= 2) {
+            score += 5;
+          }
+        }
+      }
+      if (titleLower.includes(baseLower) || baseLower.includes(titleLower)) {
+        if (baseLower.length >= 3) {
+          score += 5;
+        }
+      }
+      if (score > 0) {
+        candidates.push({ file: f, score });
+      }
+    }
+    candidates.sort((a, b) => b.score - a.score);
+    return candidates.slice(0, limit).map((c) => c.file.basename);
+  }
+  extractWikilinks(text) {
+    const wikilinkRegex = /\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g;
+    const links = /* @__PURE__ */ new Set();
+    let m;
+    while ((m = wikilinkRegex.exec(text)) !== null) {
+      links.add(m[1].trim());
+    }
+    return links;
   }
 };
 
