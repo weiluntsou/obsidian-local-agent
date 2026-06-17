@@ -73,8 +73,8 @@ const REFINER_SYSTEM_PROMPT = `你是一位專業的知識精修與摘要引擎�
 3. 在選擇重點提取時要評選謹慎。如果整篇文本毫無價值，"highlights" 可以為空。
 4. "atomicNotes" 應只包含高度具體且可重複使用的洞見。如無不同的概念，不強行建立。
 5. 「摘要」、「關鍵詞彙」（中文部分）、「重點提取」和「原子化筆記.內容」中的所有文本必須為繁體中文（zh-TW）。
-6. 不可包含 Markdown 代碼區塊（markdown fences）、代碼片段或 JSON 物件外的任何文字。必須為有效的 JSON（valid JSON）。
-7. 為了增加知識庫的關聯性，請參考輸入中提供的「知識庫現有標籤」列表。如果內容與現有標籤相關，請優先選用這些已存在的標籤。若現有標籤皆不適用，方可根據內容生成新的標籤。標籤格式須以「#」開頭。`;
+7. 為了增加知識庫的關聯性，請參考輸入中提供的「知識庫現有標籤」列表。如果內容與現有標籤相關，請優先選用這些已存在的標籤。若現有標籤皆不適用，方可根據內容生成新的標籤。標籤格式須以「#」開頭。
+8. 請參考輸入中的「關聯筆記候選清單」。若在撰寫「摘要」、「重點提取」或「原子化概念」內容時提到候選清單中的概念或頁面，請使用雙層括號 `[[筆記名稱]]`（例如 [[Docker]]）進行雙向連結，建立知識網路。`;
 
 interface RefinerResult {
   suggestedTitle: string;
@@ -477,7 +477,106 @@ ${data.content}
     }
 
     return parts.join("\n");
+  private getFileTags(file: TFile): string[] {
+    const cache = this.app.metadataCache.getFileCache(file);
+    if (!cache) return [];
+    
+    const tags: string[] = [];
+    
+    // Frontmatter tags
+    if (cache.frontmatter) {
+      const fmTags = cache.frontmatter.tags || cache.frontmatter.tag;
+      if (Array.isArray(fmTags)) {
+        for (const t of fmTags) {
+          if (typeof t === "string") {
+            tags.push(t.replace(/^#/, "").trim());
+          }
+        }
+      } else if (typeof fmTags === "string") {
+        const parts = fmTags.split(/[\s,]+/).map(p => p.replace(/[\[\]"']|#/g, "").trim());
+        tags.push(...parts.filter(Boolean));
+      }
+    }
+    
+    // Inline tags
+    if (cache.tags) {
+      for (const t of cache.tags) {
+        tags.push(t.tag.replace(/^#/, "").trim());
+      }
+    }
+    
+    return Array.from(new Set(tags));
   }
 
+  private findRelatedNotes(
+    currentFile: TFile, 
+    tags: string[], 
+    keywords: { en: string; zh: string }[],
+    suggestedTitle: string,
+    existingLinks: Set<string>,
+    limit: number = 5
+  ): string[] {
+    const allFiles = this.app.vault.getMarkdownFiles();
+    const candidates: { file: TFile; score: number }[] = [];
 
+    const cleanTags = tags.map(t => t.replace(/^#/, "").trim().toLowerCase());
+    const keywordSet = new Set(
+      keywords.flatMap(kw => [kw.en.toLowerCase(), kw.zh.toLowerCase()]).filter(Boolean)
+    );
+    const titleLower = suggestedTitle.toLowerCase();
+
+    for (const f of allFiles) {
+      if (f.path === currentFile.path) continue;
+      // Do not suggest files that are already linked
+      if (existingLinks.has(f.basename)) continue;
+      // Exclude special utility or system files
+      if (f.basename === "plan" || f.basename === "draft" || f.basename.includes("Atomic Note")) continue;
+
+      let score = 0;
+      
+      // Tag-based relation
+      const fTags = this.getFileTags(f).map(t => t.toLowerCase());
+      for (const t of fTags) {
+        if (cleanTags.includes(t)) {
+          score += 10;
+        }
+      }
+
+      // Keyword-based relation
+      const baseLower = f.basename.toLowerCase();
+      for (const kw of keywordSet) {
+        if (baseLower === kw) {
+          score += 20;
+        } else if (baseLower.includes(kw) || kw.includes(baseLower)) {
+          if (baseLower.length >= 2 && kw.length >= 2) {
+            score += 5;
+          }
+        }
+      }
+
+      // Title relation
+      if (titleLower.includes(baseLower) || baseLower.includes(titleLower)) {
+        if (baseLower.length >= 3) {
+          score += 5;
+        }
+      }
+
+      if (score > 0) {
+        candidates.push({ file: f, score });
+      }
+    }
+
+    candidates.sort((a, b) => b.score - a.score);
+    return candidates.slice(0, limit).map(c => c.file.basename);
+  }
+
+  private extractWikilinks(text: string): Set<string> {
+    const wikilinkRegex = /\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g;
+    const links: Set<string> = new Set();
+    let m;
+    while ((m = wikilinkRegex.exec(text)) !== null) {
+      links.add(m[1].trim());
+    }
+    return links;
+  }
 }
