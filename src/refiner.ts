@@ -73,7 +73,8 @@ const REFINER_SYSTEM_PROMPT = `你是一位專業的知識精修與摘要引擎�
 3. 在選擇重點提取時要評選謹慎。如果整篇文本毫無價值，"highlights" 可以為空。
 4. "atomicNotes" 應只包含高度具體且可重複使用的洞見。如無不同的概念，不強行建立。
 5. 「摘要」、「關鍵詞彙」（中文部分）、「重點提取」和「原子化筆記.內容」中的所有文本必須為繁體中文（zh-TW）。
-6. 不可包含 Markdown 代碼區塊（markdown fences）、代碼片段或 JSON 物件外的任何文字。必須為有效的 JSON（valid JSON）。`;
+6. 不可包含 Markdown 代碼區塊（markdown fences）、代碼片段或 JSON 物件外的任何文字。必須為有效的 JSON（valid JSON）。
+7. 為了增加知識庫的關聯性，請參考輸入中提供的「知識庫現有標籤」列表。如果內容與現有標籤相關，請優先選用這些已存在的標籤。若現有標籤皆不適用，方可根據內容生成新的標籤。標籤格式須以「#」開頭。`;
 
 interface RefinerResult {
   suggestedTitle: string;
@@ -106,10 +107,22 @@ export class NoteRefinerEngine {
       // ── Ontology Preservation: capture relationships before rewrite ──
       const ontology = this.captureOntology(originalContent);
 
+      // Get all existing tags in the vault to help LLM reuse them
+      const allVaultTagsMap = this.app.metadataCache.getTags();
+      const sortedTags = Object.entries(allVaultTagsMap)
+        .sort((a, b) => b[1] - a[1]) // Sort by frequency (most used first)
+        .map(([tag]) => tag); // e.g. "#tagname"
+
+      // Limit to top 150 tags to avoid overloading LLM context
+      const tagListLimit = 150;
+      const limitedTags = sortedTags.slice(0, tagListLimit);
+      const existingTagsContext = limitedTags.length > 0
+        ? `\n\n【知識庫現有標籤（供參考，請優先選用相關的標籤以增加關連性，亦可自行發明新標籤）：】\n${limitedTags.join(", ")}`
+        : "";
 
       new Notice(`正在精修「${file.basename}」...這可能需要一些時間。`);
 
-      const userPromptContext = `【原始標題】：${file.basename}\n\n【筆記內文】：\n${bodyContent}`;
+      const userPromptContext = `【原始標題】：${file.basename}\n\n【筆記內文】：\n${bodyContent}${existingTagsContext}`;
 
       const rawResponse = await this.apiClient.prompt(
         REFINER_SYSTEM_PROMPT,

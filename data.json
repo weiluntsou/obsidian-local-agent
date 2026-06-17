@@ -1,9 +1,10 @@
 {
   "apiEndpoint": "http://127.0.0.1:8000",
-  "defaultModel": "gemma-4-e4b-it-8bit",
+  "defaultModel": "gemma-4-12B-it-8bit",
   "inputFolder": "Daily Notes",
   "outputFolder": "Insights",
   "maxFilesToProcess": 20,
   "classificationTemperature": 0.2,
-  "aggregationTemperature": 0.5
+  "aggregationTemperature": 0.5,
+  "refinementTemperature": 0.3
 }

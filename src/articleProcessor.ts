@@ -43,7 +43,7 @@ const ARTICLE_PROCESSOR_PROMPT = `閱讀使用者提供的文章內容（包含�
   - 30_生活與創作（生活飲食、旅遊、個人興趣）
   - 40_自託管實驗室（伺服器、Docker 容器化（containerization）、自託管（self-hosted）、人工智慧（AI）工具）
   - 99_未分類（無法歸類到以上四大類別時放這裡）
-- tags（標籤）: [提取 2-3 個與主題相關的標籤，必須包含 #web-clippings（網頁剪輯），並視情況加上 #status/to-process（待處理狀態）或 #status/evergreen（常青筆記狀態）]
+- tags（標籤）: [提取 2-3 個與主題相關的標籤，必須包含 #web-clippings（網頁剪輯），並視情況加上 #status/to-process（待處理狀態）或 #status/evergreen（常青筆記狀態）。為了增加知識庫的關聯性，請參考輸入中提供的「知識庫現有標籤」列表，優先選用相關的已存在標籤。若無相關標籤，才自行生成新標籤。]
 
 ## 步驟二：撰寫「一句話總結（One-Sentence Summary）」
 在 YAML 區塊下方，請用一句精煉的話（不超過 50 字）總結這篇文章的核心價值或解決的問題，讓未來的讀者（使用者本人）能在一秒內決定是否需要繼續閱讀。
@@ -54,7 +54,7 @@ const ARTICLE_PROCESSOR_PROMPT = `閱讀使用者提供的文章內容（包含�
 ## 步驟四：原子化概念標記與獨立萃取（Atomization & Extraction）
 這是最重要的一步。請主動辨識文章中出現的「獨立重要概念」、「專有名詞」、「框架」或「演算法」（例如：特定的管理工具、系統架構名稱等）。
 1. 在重點提取的正文中，將這些詞彙使用雙層中括號 \`[[ ]]\` 包覆起來。
-2. 在整份筆記的最末端，請 **務必** 使用以下 \`<atomic-notes>\` 的 XML（延標記語言）結構，為每一個標記 \`[[ ]]\` 的專有名詞產生獨立筆記內容（包含定義、用途及關聯標籤）。
+2. 在整份筆記的最末端，請 **務必** 使用以下 \`<atomic-notes>\` 的 XML（延標記語言）結構，為每一個標記 \`[[ ]]\` 的專有名詞產生獨立筆記內容（包含定義、用途及關聯標籤，標籤也請優先參考並選用「知識庫現有標籤」列表中的相關標籤）。
 
 ---
 # 輸出範本（嚴格遵循此格式輸出，不要輸出任何其他多餘的對話文字）
@@ -104,12 +104,24 @@ export class ArticleProcessorEngine {
       // ── Ontology Preservation: capture relationships before rewrite ──
       const ontology = this.captureOntology(content);
 
+      // Get all existing tags in the vault to help LLM reuse them
+      const allVaultTagsMap = this.app.metadataCache.getTags();
+      const sortedTags = Object.entries(allVaultTagsMap)
+        .sort((a, b) => b[1] - a[1]) // Sort by frequency
+        .map(([tag]) => tag); // e.g. "#tagname"
+
+      // Limit to top 150 tags to avoid overloading LLM context
+      const tagListLimit = 150;
+      const limitedTags = sortedTags.slice(0, tagListLimit);
+      const existingTagsContext = limitedTags.length > 0
+        ? `\n\n【知識庫現有標籤（供參考，請優先選用相關的標籤以增加關連性，亦可自行發明新標籤）：】\n${limitedTags.join(", ")}`
+        : "";
 
       const systemPrompt = ARTICLE_PROCESSOR_PROMPT
           .replace(/\{CAPTURED_DATE\}/g, today)
           .replace(/\{SOURCE_URL\}/g, sourceUrl || "[填寫原文網址，若無則留空]");
 
-      const userPromptContext = `【原始標題】：${file.basename}\n\n【文章內文】：\n${content}`;
+      const userPromptContext = `【原始標題】：${file.basename}\n\n【文章內文】：\n${content}${existingTagsContext}`;
 
       new Notice(`正在處理文章「${file.basename}」...這可能需要一些時間。`);
 
