@@ -1,14 +1,19 @@
 /**
  * main.ts — Obsidian Local Agent
  *
- * Root plugin class that wires together all three modules:
+ * Root plugin class that wires together all modules:
  *   Module 1 — API Bridge (see api.ts)
  *   Module 2 — Structured Classification Engine
  *   Module 3 — Map-Reduce Aggregation Engine
+ *   Second Self — Reasoning & Synthesis System
+ *     - Viewpoint Catalyst (viewpointCatalyst.ts)
+ *     - Contradiction Radar (contradictionRadar.ts)
+ *     - Core Question Anchor (coreQuestionAnchor.ts)
+ *     - Synthesis Engine (synthesisEngine.ts)
  *
  * Design principles:
- *   - 100 % local privacy — all LLM calls go to localhost only.
- *   - Zero external MCP servers.
+ *   - Local-first privacy — LLM calls default to localhost.
+ *   - Optional cloud engine (Gemini) for macro synthesis.
  *   - Fully asynchronous background processing.
  *   - NO real-time editor auto-completion / text prediction.
  */
@@ -24,12 +29,14 @@ import {
 } from "obsidian";
 
 import { LocalLLMClient, parseJsonFromLLM } from "./api";
+import { CloudLLMClient } from "./cloudApi";
 import { ClassificationEngine } from "./classifier";
 import { NoteRefinerEngine } from "./refiner";
 import { ArticleProcessorEngine } from "./articleProcessor";
 import { ThreadsProcessorEngine } from "./threadsProcessor";
 import { WriterEngine, TopicInputModal } from "./writer";
 import { CleanerEngine } from "./cleaner";
+import { SynthesisEngine } from "./synthesisEngine";
 import {
   DEFAULT_SETTINGS,
   LocalAgentSettings,
@@ -64,6 +71,10 @@ export default class LocalAgentPlugin extends Plugin {
     endpoint: DEFAULT_SETTINGS.apiEndpoint,
     model: DEFAULT_SETTINGS.defaultModel,
   });
+  cloudClient: CloudLLMClient = new CloudLLMClient(
+    DEFAULT_SETTINGS.cloudApiKey,
+    DEFAULT_SETTINGS.cloudModel
+  );
 
   private statusBarEl: HTMLElement | null = null;
   private isProcessing = false;
@@ -77,6 +88,10 @@ export default class LocalAgentPlugin extends Plugin {
     // Sync API client with persisted settings
     this.apiClient.setEndpoint(this.settings.apiEndpoint);
     this.apiClient.setModel(this.settings.defaultModel);
+
+    // Sync Cloud API client
+    this.cloudClient.setApiKey(this.settings.cloudApiKey);
+    this.cloudClient.setModel(this.settings.cloudModel);
 
     // Status bar item for background task feedback
     this.statusBarEl = this.addStatusBarItem();
@@ -110,6 +125,12 @@ export default class LocalAgentPlugin extends Plugin {
       this.processThreadsPosts();
     });
     threadsIconEl.addClass('local-agent-threads-class');
+
+    // Add Ribbon Icon for Second Self Synthesis Engine
+    const synthesisIconEl = this.addRibbonIcon('brain', '🧠 Second Self 每日合成', (evt: MouseEvent) => {
+      this.runDailySynthesis();
+    });
+    synthesisIconEl.addClass('local-agent-synthesis-class');
 
     // Add Context Menu: Right-Click on File in File Explorer
     this.registerEvent(
@@ -217,6 +238,31 @@ export default class LocalAgentPlugin extends Plugin {
         }
       },
     });
+
+    // ----- Second Self Commands --------------------------------------------
+
+    this.addCommand({
+      id: "second-self-daily-synthesis",
+      name: "🧠 Second Self：每日合成簡報（過去 7 天精修筆記）",
+      callback: () => this.runDailySynthesis(),
+    });
+
+    this.addCommand({
+      id: "second-self-weekly-synthesis",
+      name: "🧠 Second Self：每週深度報告（過去 30 天精修筆記）",
+      callback: () => this.runWeeklySynthesis(),
+    });
+
+    // ----- Second Self: Auto-trigger & IDENTITY.md -------------------------
+
+    // Ensure IDENTITY.md template exists
+    this.app.workspace.onLayoutReady(() => {
+      this.ensureIdentityFile();
+      // Auto-trigger daily synthesis on first open
+      if (this.settings.cloudEnabled) {
+        this.autoTriggerDailySynthesis();
+      }
+    });
   }
 
   onunload(): void {
@@ -239,6 +285,10 @@ export default class LocalAgentPlugin extends Plugin {
     // Keep the API client in sync when settings change
     this.apiClient.setEndpoint(this.settings.apiEndpoint);
     this.apiClient.setModel(this.settings.defaultModel);
+
+    // Keep the Cloud API client in sync
+    this.cloudClient.setApiKey(this.settings.cloudApiKey);
+    this.cloudClient.setModel(this.settings.cloudModel);
   }
 
   // ---- Status bar helper --------------------------------------------------
@@ -318,7 +368,9 @@ export default class LocalAgentPlugin extends Plugin {
       const engine = new NoteRefinerEngine(
         this.app,
         this.apiClient,
-        this.settings.refinementTemperature
+        this.settings.refinementTemperature,
+        this.settings.secondSelfFolder,
+        this.settings.identityFileName
       );
       await engine.refineFile(file);
     } catch (err) {
@@ -735,6 +787,145 @@ export default class LocalAgentPlugin extends Plugin {
 
     const file = await this.app.vault.create(filePath, fullReport);
     return file;
+  }
+
+  // ========================================================================
+  // SECOND SELF — Synthesis Engine
+  // ========================================================================
+
+  private async runDailySynthesis(): Promise<void> {
+    if (this.isProcessing) {
+      new Notice("Local Agent 正在執行其他任務，請稍候。");
+      return;
+    }
+
+    this.isProcessing = true;
+    this.setStatusBarText("🧠 Second Self: Running daily synthesis...");
+
+    try {
+      const engine = new SynthesisEngine(
+        this.app,
+        this.apiClient,
+        this.settings.cloudEnabled ? this.cloudClient : null,
+        this.settings.cloudEnabled,
+        this.settings.secondSelfFolder,
+        this.settings.aggregationTemperature
+      );
+      await engine.runDailySynthesis();
+    } catch (err) {
+      console.error("[Local Agent] Daily synthesis error:", err);
+      new Notice(`每日合成失敗：${(err as Error).message}`);
+    } finally {
+      this.isProcessing = false;
+      this.setStatusBarText("");
+    }
+  }
+
+  private async runWeeklySynthesis(): Promise<void> {
+    if (this.isProcessing) {
+      new Notice("Local Agent 正在執行其他任務，請稍候。");
+      return;
+    }
+
+    this.isProcessing = true;
+    this.setStatusBarText("🧠 Second Self: Running weekly deep synthesis...");
+
+    try {
+      const engine = new SynthesisEngine(
+        this.app,
+        this.apiClient,
+        this.settings.cloudEnabled ? this.cloudClient : null,
+        this.settings.cloudEnabled,
+        this.settings.secondSelfFolder,
+        this.settings.aggregationTemperature
+      );
+      await engine.runWeeklySynthesis();
+    } catch (err) {
+      console.error("[Local Agent] Weekly synthesis error:", err);
+      new Notice(`每週合成失敗：${(err as Error).message}`);
+    } finally {
+      this.isProcessing = false;
+      this.setStatusBarText("");
+    }
+  }
+
+  /**
+   * Auto-trigger daily synthesis on first open of the day.
+   * Uses a delayed check to avoid blocking Obsidian startup.
+   */
+  private autoTriggerDailySynthesis(): void {
+    const engine = new SynthesisEngine(
+      this.app,
+      this.apiClient,
+      this.settings.cloudEnabled ? this.cloudClient : null,
+      this.settings.cloudEnabled,
+      this.settings.secondSelfFolder,
+      this.settings.aggregationTemperature
+    );
+    engine.checkAndRunDailyAuto();
+  }
+
+  // ========================================================================
+  // SECOND SELF — IDENTITY.md Auto-Generation
+  // ========================================================================
+
+  /**
+   * Ensure the IDENTITY.md template exists in the Second Self folder.
+   * If not, create the folder structure and a starter template.
+   */
+  private async ensureIdentityFile(): Promise<void> {
+    const folderPath = normalizePath(this.settings.secondSelfFolder);
+    const identityPath = normalizePath(
+      `${this.settings.secondSelfFolder}/${this.settings.identityFileName}`
+    );
+    const briefsPath = normalizePath(`${this.settings.secondSelfFolder}/Briefs`);
+
+    try {
+      // Ensure folder structure
+      if (!this.app.vault.getAbstractFileByPath(folderPath)) {
+        await this.app.vault.createFolder(folderPath);
+      }
+      if (!this.app.vault.getAbstractFileByPath(briefsPath)) {
+        await this.app.vault.createFolder(briefsPath);
+      }
+
+      // Create IDENTITY.md if it doesn't exist
+      if (!this.app.vault.getAbstractFileByPath(identityPath)) {
+        const today = new Date().toISOString().split("T")[0];
+        const template = [
+          "---",
+          "type: identity",
+          `updated: ${today}`,
+          "---",
+          "",
+          "# 身份描述 (Identity Profile)",
+          "",
+          "> 在此描述你的核心價值觀、思維傾向與長期目標。",
+          "> Second Self 系統將參照此檔案進行矛盾檢測與核心問題錨定。",
+          "",
+          "## 核心問題 (Core Questions)",
+          "",
+          "1. [在此填入你目前最關注的第一個開放性問題]",
+          "2. [在此填入第二個開放性問題]",
+          "3. [在此填入第三個開放性問題]",
+          "",
+          "## 思維立場 (Positions)",
+          "",
+          "> 記錄你對重要議題的明確立場，供矛盾檢測參考。",
+          "> 例如：「我相信...因為...」",
+          "",
+          "- ",
+          "",
+        ].join("\n");
+
+        await this.app.vault.create(identityPath, template);
+        new Notice(
+          `🧠 Second Self：已建立身份描述模板 ${this.settings.identityFileName}，請填寫您的核心問題！`
+        );
+      }
+    } catch (err) {
+      console.error("[Local Agent] Failed to ensure IDENTITY.md:", err);
+    }
   }
 
   // ---- Utility ------------------------------------------------------------

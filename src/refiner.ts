@@ -1,5 +1,8 @@
 import { App, TFile, Notice, normalizePath } from "obsidian";
 import { LocalLLMClient, parseJsonFromLLM } from "./api";
+import { ViewpointCatalyst } from "./viewpointCatalyst";
+import { ContradictionRadar } from "./contradictionRadar";
+import { CoreQuestionAnchor } from "./coreQuestionAnchor";
 
 /**
  * Ontology snapshot: captures the semantic relationships (wikilinks,
@@ -88,11 +91,19 @@ interface RefinerResult {
 }
 
 export class NoteRefinerEngine {
+  private secondSelfFolder: string;
+  private identityFileName: string;
+
   constructor(
     private app: App,
     private apiClient: LocalLLMClient,
-    private temperature: number
-  ) {}
+    private temperature: number,
+    secondSelfFolder: string = "04_Second_Self",
+    identityFileName: string = "IDENTITY.md"
+  ) {
+    this.secondSelfFolder = secondSelfFolder;
+    this.identityFileName = identityFileName;
+  }
 
   public async refineFile(file: TFile): Promise<void> {
     try {
@@ -240,6 +251,51 @@ export class NoteRefinerEngine {
         new Notice(`精修完成並已重新命名為「${finalName}」，移動到 ${finalCategory}`);
       } else {
         new Notice(`精修完成（${finalName}）。`);
+      }
+
+      // ================================================================
+      // SECOND SELF — Post-Refinement Reasoning Pipeline
+      // Feature 1 → Feature 2 → Feature 3 (sequential)
+      // ================================================================
+
+      // Feature 1: Viewpoint Catalyst (blocking modal for external sources)
+      try {
+        const catalyst = new ViewpointCatalyst(
+          this.app,
+          this.apiClient,
+          this.temperature
+        );
+        await catalyst.challenge(file);
+      } catch (err) {
+        console.error("[NoteRefinerEngine] Viewpoint Catalyst error:", err);
+      }
+
+      // Feature 2: Contradiction Radar (background, non-blocking)
+      try {
+        const radar = new ContradictionRadar(
+          this.app,
+          this.apiClient,
+          this.temperature,
+          this.secondSelfFolder,
+          this.identityFileName
+        );
+        await radar.scan(file);
+      } catch (err) {
+        console.error("[NoteRefinerEngine] Contradiction Radar error:", err);
+      }
+
+      // Feature 3: Core Question Anchor (background, non-blocking)
+      try {
+        const anchor = new CoreQuestionAnchor(
+          this.app,
+          this.apiClient,
+          this.temperature,
+          this.secondSelfFolder,
+          this.identityFileName
+        );
+        await anchor.anchor(file);
+      } catch (err) {
+        console.error("[NoteRefinerEngine] Core Question Anchor error:", err);
       }
 
     } catch (err) {

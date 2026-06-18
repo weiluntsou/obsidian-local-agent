@@ -3,6 +3,9 @@
  *
  * Defines the user-configurable options for Obsidian Local Agent and
  * renders the settings UI inside Obsidian's native Settings panel.
+ *
+ * Includes both local LLM settings and Cloud API (Gemini) settings
+ * for the Second Self reasoning/synthesis system.
  */
 
 import {
@@ -12,6 +15,7 @@ import {
   Setting,
 } from "obsidian";
 import type LocalAgentPlugin from "./main";
+import { CLOUD_MODEL_OPTIONS } from "./cloudApi";
 
 // ---------------------------------------------------------------------------
 // Settings Interface & Defaults
@@ -58,6 +62,29 @@ export interface LocalAgentSettings {
    * Default 0.3
    */
   refinementTemperature: number;
+
+  // -----------------------------------------------------------------------
+  // Second Self — Cloud API Settings
+  // -----------------------------------------------------------------------
+
+  /** Enable cloud model for macro synthesis (daily/weekly briefs). */
+  cloudEnabled: boolean;
+
+  /** Cloud API Key (Gemini API Key). */
+  cloudApiKey: string;
+
+  /** Cloud model name for synthesis tasks. */
+  cloudModel: string;
+
+  // -----------------------------------------------------------------------
+  // Second Self — Path Configuration
+  // -----------------------------------------------------------------------
+
+  /** Vault-relative path to the Second Self working folder. */
+  secondSelfFolder: string;
+
+  /** Filename for the identity description file (inside secondSelfFolder). */
+  identityFileName: string;
 }
 
 export const DEFAULT_SETTINGS: LocalAgentSettings = {
@@ -69,6 +96,13 @@ export const DEFAULT_SETTINGS: LocalAgentSettings = {
   classificationTemperature: 0.2,
   aggregationTemperature: 0.5,
   refinementTemperature: 0.3,
+  // Cloud API
+  cloudEnabled: false,
+  cloudApiKey: "",
+  cloudModel: "gemini-3.1-flash-lite",
+  // Second Self paths
+  secondSelfFolder: "04_Second_Self",
+  identityFileName: "IDENTITY.md",
 };
 
 // ---------------------------------------------------------------------------
@@ -150,6 +184,115 @@ export class LocalAgentSettingTab extends PluginSettingTab {
             button.setButtonText("Ping Server");
           }
         })
+      );
+
+    // --- Section: Cloud API (Second Self) ----------------------------------
+    containerEl.createEl("h2", { text: "☁️ 雲端 API（Second Self 合成引擎）" });
+    containerEl.createEl("p", {
+      text: "設定 Google Gemini 雲端 API，用於每日/每週宏觀合成簡報。若未啟用，合成引擎將使用本地模型作為降級方案。",
+      cls: "setting-item-description",
+    });
+
+    new Setting(containerEl)
+      .setName("啟用線上模型進行宏觀合成")
+      .setDesc("開啟後，每日/每週合成簡報將使用 Gemini 雲端模型處理跨時間段的長文本合成。")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.cloudEnabled)
+          .onChange(async (value) => {
+            this.plugin.settings.cloudEnabled = value;
+            await this.plugin.saveSettings();
+            // Re-render to show/hide dependent fields
+            this.display();
+          })
+      );
+
+    if (this.plugin.settings.cloudEnabled) {
+      new Setting(containerEl)
+        .setName("Gemini API Key")
+        .setDesc("從 Google AI Studio 取得的 API Key。此值以密碼形式儲存。")
+        .addText((text) => {
+          text.inputEl.type = "password";
+          text.inputEl.style.width = "300px";
+          text
+            .setPlaceholder("AIza...")
+            .setValue(this.plugin.settings.cloudApiKey)
+            .onChange(async (value) => {
+              this.plugin.settings.cloudApiKey = value.trim();
+              await this.plugin.saveSettings();
+            });
+        });
+
+      new Setting(containerEl)
+        .setName("線上模型選擇")
+        .setDesc("選擇用於宏觀合成的 Gemini 模型。")
+        .addDropdown((dropdown) => {
+          for (const opt of CLOUD_MODEL_OPTIONS) {
+            dropdown.addOption(opt.value, opt.label);
+          }
+          dropdown
+            .setValue(this.plugin.settings.cloudModel)
+            .onChange(async (value) => {
+              this.plugin.settings.cloudModel = value;
+              await this.plugin.saveSettings();
+            });
+        });
+
+      new Setting(containerEl)
+        .setName("測試雲端連線")
+        .setDesc("驗證 Gemini API Key 是否有效且可連線。")
+        .addButton((button) =>
+          button.setButtonText("Ping Gemini").onClick(async () => {
+            button.setDisabled(true);
+            button.setButtonText("Testing...");
+            try {
+              const ok = await this.plugin.cloudClient.ping();
+              if (ok) {
+                new Notice("✅ Gemini API 連線成功！");
+              } else {
+                new Notice("❌ Gemini API 連線失敗。請檢查 API Key 是否正確。");
+              }
+            } catch (err) {
+              new Notice(`連線錯誤：${(err as Error).message}`);
+            } finally {
+              button.setDisabled(false);
+              button.setButtonText("Ping Gemini");
+            }
+          })
+        );
+    }
+
+    // --- Section: Second Self Path Configuration ---------------------------
+    containerEl.createEl("h2", { text: "🧠 Second Self 路徑配置" });
+
+    new Setting(containerEl)
+      .setName("推理系統工作資料夾")
+      .setDesc(
+        "Second Self 系統的工作資料夾名稱（Vault 根目錄下）。合成報告與 IDENTITY.md 均存放於此。"
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder("04_Second_Self")
+          .setValue(this.plugin.settings.secondSelfFolder)
+          .onChange(async (value) => {
+            this.plugin.settings.secondSelfFolder = value.trim();
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("身份描述檔案名稱")
+      .setDesc(
+        "記錄核心價值觀、立場與開放性問題的檔案名稱。用於矛盾檢測與核心問題錨定。"
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder("IDENTITY.md")
+          .setValue(this.plugin.settings.identityFileName)
+          .onChange(async (value) => {
+            this.plugin.settings.identityFileName = value.trim();
+            await this.plugin.saveSettings();
+          })
       );
 
     // --- Section: Folder Configuration -------------------------------------
