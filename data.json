@@ -6,5 +6,10 @@
   "maxFilesToProcess": 20,
   "classificationTemperature": 0.2,
   "aggregationTemperature": 0.5,
-  "refinementTemperature": 0.3
+  "refinementTemperature": 0.3,
+  "cloudEnabled": true,
+  "cloudApiKey": "AIzaSyBTF9PL3G4e_cUK7IAE0ZEj2RuWALUq-8k",
+  "cloudModel": "gemini-3.1-flash-lite",
+  "secondSelfFolder": "04_Second_Self",
+  "identityFileName": "IDENTITY.md"
 }
