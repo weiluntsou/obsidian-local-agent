@@ -258,6 +258,13 @@ export class NoteRefinerEngine {
       // Feature 1 → Feature 2 → Feature 3 (sequential)
       // ================================================================
 
+      // After rename and/or move, `file` may point to a stale path.
+      // Re-fetch the live TFile from vault to ensure metadataCache is valid.
+      const parentDirAfterMove = file.parent?.path || "";
+      const movedCategory = shouldMove ? finalCategory : parentDirAfterMove;
+      const freshPath = normalizePath(`${movedCategory}/${finalName}.md`);
+      const freshFile = (this.app.vault.getAbstractFileByPath(freshPath) as TFile) ?? file;
+
       // Feature 1: Viewpoint Catalyst (blocking modal for external sources)
       try {
         const catalyst = new ViewpointCatalyst(
@@ -265,7 +272,7 @@ export class NoteRefinerEngine {
           this.apiClient,
           this.temperature
         );
-        await catalyst.challenge(file);
+        await catalyst.challenge(freshFile);
       } catch (err) {
         console.error("[NoteRefinerEngine] Viewpoint Catalyst error:", err);
       }
@@ -279,7 +286,7 @@ export class NoteRefinerEngine {
           this.secondSelfFolder,
           this.identityFileName
         );
-        await radar.scan(file);
+        await radar.scan(freshFile);
       } catch (err) {
         console.error("[NoteRefinerEngine] Contradiction Radar error:", err);
       }
@@ -293,7 +300,7 @@ export class NoteRefinerEngine {
           this.secondSelfFolder,
           this.identityFileName
         );
-        await anchor.anchor(file);
+        await anchor.anchor(freshFile);
       } catch (err) {
         console.error("[NoteRefinerEngine] Core Question Anchor error:", err);
       }

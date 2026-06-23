@@ -524,7 +524,8 @@ var ViewpointCatalyst = class {
    */
   async challenge(file) {
     try {
-      if (!this.isExternalSource(file)) {
+      const isExternal = await this.isExternalSource(file);
+      if (!isExternal) {
         console.log(
           `[ViewpointCatalyst] ${file.basename} is not external source, skipping.`
         );
@@ -578,19 +579,34 @@ ${truncatedBody}`,
   /**
    * Determine if a note is from an external source.
    * Checks frontmatter for type: reference, or source URL presence.
+   * Reads frontmatter directly from vault content as fallback when
+   * metadataCache hasn't synced yet (e.g., right after a rename).
    */
-  isExternalSource(file) {
+  async isExternalSource(file) {
     var _a;
     const cache = this.app.metadataCache.getFileCache(file);
-    if (!(cache == null ? void 0 : cache.frontmatter)) return false;
-    const fm = cache.frontmatter;
-    if (fm.type === "reference") return true;
-    if (fm.source && typeof fm.source === "string" && fm.source.startsWith("http")) {
-      return true;
+    const fm = cache == null ? void 0 : cache.frontmatter;
+    if (fm) {
+      if (fm.type === "reference") return true;
+      if (fm.source && typeof fm.source === "string" && fm.source.startsWith("http")) return true;
+      if (fm.has_reflection === true) return false;
     }
     const parentPath = ((_a = file.parent) == null ? void 0 : _a.path) || "";
     if (parentPath === "00_Inbox" || parentPath === "00_\u6536\u4EF6\u7BB1" || parentPath.startsWith("Clippings")) {
       return true;
+    }
+    if (!fm) {
+      try {
+        const rawContent = await this.app.vault.read(file);
+        const fmMatch = rawContent.match(/^---\s*\n([\s\S]*?)\n---/);
+        if (fmMatch) {
+          const fmBlock = fmMatch[1];
+          if (/^type:\s*reference/m.test(fmBlock)) return true;
+          const sourceMatch = fmBlock.match(/^source:\s*(.+)/m);
+          if (sourceMatch && sourceMatch[1].trim().startsWith("http")) return true;
+        }
+      } catch (e) {
+      }
     }
     return false;
   }
@@ -1168,7 +1184,7 @@ var NoteRefinerEngine = class {
     this.identityFileName = identityFileName;
   }
   async refineFile(file) {
-    var _a, _b;
+    var _a, _b, _c, _d;
     try {
       const originalContent = await this.app.vault.read(file);
       const bodyContent = this.stripFrontmatter(originalContent);
@@ -1275,13 +1291,17 @@ ${bodyContent}${existingTagsContext}${relatedContext}`;
       } else {
         new import_obsidian7.Notice(`\u7CBE\u4FEE\u5B8C\u6210\uFF08${finalName}\uFF09\u3002`);
       }
+      const parentDirAfterMove = ((_c = file.parent) == null ? void 0 : _c.path) || "";
+      const movedCategory = shouldMove ? finalCategory : parentDirAfterMove;
+      const freshPath = (0, import_obsidian7.normalizePath)(`${movedCategory}/${finalName}.md`);
+      const freshFile = (_d = this.app.vault.getAbstractFileByPath(freshPath)) != null ? _d : file;
       try {
         const catalyst = new ViewpointCatalyst(
           this.app,
           this.apiClient,
           this.temperature
         );
-        await catalyst.challenge(file);
+        await catalyst.challenge(freshFile);
       } catch (err) {
         console.error("[NoteRefinerEngine] Viewpoint Catalyst error:", err);
       }
@@ -1293,7 +1313,7 @@ ${bodyContent}${existingTagsContext}${relatedContext}`;
           this.secondSelfFolder,
           this.identityFileName
         );
-        await radar.scan(file);
+        await radar.scan(freshFile);
       } catch (err) {
         console.error("[NoteRefinerEngine] Contradiction Radar error:", err);
       }
@@ -1305,7 +1325,7 @@ ${bodyContent}${existingTagsContext}${relatedContext}`;
           this.secondSelfFolder,
           this.identityFileName
         );
-        await anchor.anchor(file);
+        await anchor.anchor(freshFile);
       } catch (err) {
         console.error("[NoteRefinerEngine] Core Question Anchor error:", err);
       }

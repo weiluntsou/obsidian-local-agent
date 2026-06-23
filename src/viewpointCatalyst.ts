@@ -156,7 +156,9 @@ export class ViewpointCatalyst {
   async challenge(file: TFile): Promise<void> {
     try {
       // 1. Check if this note is from an external source
-      if (!this.isExternalSource(file)) {
+      // Use await to allow a brief yield for metadataCache to sync after rename
+      const isExternal = await this.isExternalSource(file);
+      if (!isExternal) {
         console.log(
           `[ViewpointCatalyst] ${file.basename} is not external source, skipping.`
         );
@@ -219,22 +221,21 @@ export class ViewpointCatalyst {
   /**
    * Determine if a note is from an external source.
    * Checks frontmatter for type: reference, or source URL presence.
+   * Reads frontmatter directly from vault content as fallback when
+   * metadataCache hasn't synced yet (e.g., right after a rename).
    */
-  private isExternalSource(file: TFile): boolean {
+  private async isExternalSource(file: TFile): Promise<boolean> {
+    // Try metadata cache first (fast path)
     const cache = this.app.metadataCache.getFileCache(file);
-    if (!cache?.frontmatter) return false;
+    const fm = cache?.frontmatter;
 
-    const fm = cache.frontmatter;
-
-    // Has explicit type: reference
-    if (fm.type === "reference") return true;
-
-    // Has a source URL
-    if (fm.source && typeof fm.source === "string" && fm.source.startsWith("http")) {
-      return true;
+    if (fm) {
+      if (fm.type === "reference") return true;
+      if (fm.source && typeof fm.source === "string" && fm.source.startsWith("http")) return true;
+      if (fm.has_reflection === true) return false; // already processed
     }
 
-    // Is in a typical source/inbox folder
+    // Parent folder check (doesn't depend on cache)
     const parentPath = file.parent?.path || "";
     if (
       parentPath === "00_Inbox" ||
@@ -242,6 +243,23 @@ export class ViewpointCatalyst {
       parentPath.startsWith("Clippings")
     ) {
       return true;
+    }
+
+    // Fallback: read frontmatter directly from file content
+    // Necessary when metadataCache hasn't synced after a rename/move
+    if (!fm) {
+      try {
+        const rawContent = await this.app.vault.read(file);
+        const fmMatch = rawContent.match(/^---\s*\n([\s\S]*?)\n---/);
+        if (fmMatch) {
+          const fmBlock = fmMatch[1];
+          if (/^type:\s*reference/m.test(fmBlock)) return true;
+          const sourceMatch = fmBlock.match(/^source:\s*(.+)/m);
+          if (sourceMatch && sourceMatch[1].trim().startsWith("http")) return true;
+        }
+      } catch {
+        // silently ignore read errors
+      }
     }
 
     return false;
