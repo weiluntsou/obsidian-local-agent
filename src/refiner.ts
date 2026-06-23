@@ -193,14 +193,28 @@ export class NoteRefinerEngine {
 
       const tagsToAdd = [...(parsed.tags || [])];
       let shouldMove = false;
+      let destinationFolder = "";
+
+      const parentPath = file.parent?.path || "";
+      const isInInbox = (parentPath === "00_Inbox" || parentPath === "00_收件箱");
 
       if (parsed.confidence < 0.7) {
         tagsToAdd.push("#AI-Uncertain");
-      } else {
-        const parentPath = file.parent?.path || "";
-        if (parentPath === "00_收件箱" && finalCategory !== "00_收件箱") {
-          shouldMove = true;
+      }
+
+      if (isInInbox) {
+        // Read file's current content and tags to determine if it has external source or URL
+        const currentFileContent = await this.app.vault.read(file);
+        const cache = this.app.metadataCache.getFileCache(file);
+        const frontmatter = cache?.frontmatter || {};
+        const tags = this.getFileTags(file);
+
+        if (this.hasExternalSourceOrUrl(currentFileContent, frontmatter, tags)) {
+          destinationFolder = "01_Sources";
+        } else {
+          destinationFolder = "88_Archive";
         }
+        shouldMove = true;
       }
       
       // Update frontmatter — merge ontology-preserved tags + new LLM tags
@@ -212,7 +226,7 @@ export class NoteRefinerEngine {
           }
         }
 
-        frontmatter["category"] = finalCategory;
+        frontmatter["category"] = shouldMove ? destinationFolder : finalCategory;
         const existingTags: string[] = Array.isArray(frontmatter["tags"]) ? frontmatter["tags"] : [];
         const allTags = [...existingTags, ...tagsToAdd, ...ontology.frontmatterTags];
         frontmatter["tags"] = Array.from(new Set(allTags));
@@ -247,8 +261,8 @@ export class NoteRefinerEngine {
 
       // 4. Move file if needed
       if (shouldMove) {
-        await this.moveFileToCategory(file, finalCategory);
-        new Notice(`精修完成並已重新命名為「${finalName}」，移動到 ${finalCategory}`);
+        await this.moveFileToCategory(file, destinationFolder);
+        new Notice(`精修完成並已重新命名為「${finalName}」，移動到 ${destinationFolder}`);
       } else {
         new Notice(`精修完成（${finalName}）。`);
       }
@@ -261,7 +275,7 @@ export class NoteRefinerEngine {
       // After rename and/or move, `file` may point to a stale path.
       // Re-fetch the live TFile from vault to ensure metadataCache is valid.
       const parentDirAfterMove = file.parent?.path || "";
-      const movedCategory = shouldMove ? finalCategory : parentDirAfterMove;
+      const movedCategory = shouldMove ? destinationFolder : parentDirAfterMove;
       const freshPath = normalizePath(`${movedCategory}/${finalName}.md`);
       const freshFile = (this.app.vault.getAbstractFileByPath(freshPath) as TFile) ?? file;
 
@@ -670,5 +684,24 @@ ${data.content}
       links.add(m[1].trim());
     }
     return links;
+  }
+
+  private hasExternalSourceOrUrl(content: string, frontmatter: any, tags: string[]): boolean {
+    if (frontmatter) {
+      if (frontmatter.type === "reference") return true;
+      if (frontmatter.source && typeof frontmatter.source === "string" && /https?:\/\/[^\s\)]+/i.test(frontmatter.source)) return true;
+    }
+    const externalKeywords = ["web-clippings", "clippings", "reference", "source", "external-source", "clipping", "article", "paper", "web", "news"];
+    for (const tag of tags) {
+      const cleanTag = tag.replace(/^#/, "").trim().toLowerCase();
+      if (externalKeywords.some(kw => cleanTag.includes(kw))) {
+        return true;
+      }
+    }
+    const body = this.stripFrontmatter(content);
+    if (/https?:\/\/[^\s\)]+/i.test(body)) {
+      return true;
+    }
+    return false;
   }
 }

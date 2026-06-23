@@ -1250,13 +1250,23 @@ ${bodyContent}${existingTagsContext}${relatedContext}`;
       }
       const tagsToAdd = [...parsed.tags || []];
       let shouldMove = false;
+      let destinationFolder = "";
+      const parentPath = ((_a = file.parent) == null ? void 0 : _a.path) || "";
+      const isInInbox = parentPath === "00_Inbox" || parentPath === "00_\u6536\u4EF6\u7BB1";
       if (parsed.confidence < 0.7) {
         tagsToAdd.push("#AI-Uncertain");
-      } else {
-        const parentPath = ((_a = file.parent) == null ? void 0 : _a.path) || "";
-        if (parentPath === "00_\u6536\u4EF6\u7BB1" && finalCategory !== "00_\u6536\u4EF6\u7BB1") {
-          shouldMove = true;
+      }
+      if (isInInbox) {
+        const currentFileContent = await this.app.vault.read(file);
+        const cache = this.app.metadataCache.getFileCache(file);
+        const frontmatter = (cache == null ? void 0 : cache.frontmatter) || {};
+        const tags = this.getFileTags(file);
+        if (this.hasExternalSourceOrUrl(currentFileContent, frontmatter, tags)) {
+          destinationFolder = "01_Sources";
+        } else {
+          destinationFolder = "88_Archive";
         }
+        shouldMove = true;
       }
       await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
         for (const [key, value] of Object.entries(ontology.preservedFrontmatter)) {
@@ -1264,7 +1274,7 @@ ${bodyContent}${existingTagsContext}${relatedContext}`;
             frontmatter[key] = value;
           }
         }
-        frontmatter["category"] = finalCategory;
+        frontmatter["category"] = shouldMove ? destinationFolder : finalCategory;
         const existingTags = Array.isArray(frontmatter["tags"]) ? frontmatter["tags"] : [];
         const allTags = [...existingTags, ...tagsToAdd, ...ontology.frontmatterTags];
         frontmatter["tags"] = Array.from(new Set(allTags));
@@ -1286,13 +1296,13 @@ ${bodyContent}${existingTagsContext}${relatedContext}`;
         }
       }
       if (shouldMove) {
-        await this.moveFileToCategory(file, finalCategory);
-        new import_obsidian7.Notice(`\u7CBE\u4FEE\u5B8C\u6210\u4E26\u5DF2\u91CD\u65B0\u547D\u540D\u70BA\u300C${finalName}\u300D\uFF0C\u79FB\u52D5\u5230 ${finalCategory}`);
+        await this.moveFileToCategory(file, destinationFolder);
+        new import_obsidian7.Notice(`\u7CBE\u4FEE\u5B8C\u6210\u4E26\u5DF2\u91CD\u65B0\u547D\u540D\u70BA\u300C${finalName}\u300D\uFF0C\u79FB\u52D5\u5230 ${destinationFolder}`);
       } else {
         new import_obsidian7.Notice(`\u7CBE\u4FEE\u5B8C\u6210\uFF08${finalName}\uFF09\u3002`);
       }
       const parentDirAfterMove = ((_c = file.parent) == null ? void 0 : _c.path) || "";
-      const movedCategory = shouldMove ? finalCategory : parentDirAfterMove;
+      const movedCategory = shouldMove ? destinationFolder : parentDirAfterMove;
       const freshPath = (0, import_obsidian7.normalizePath)(`${movedCategory}/${finalName}.md`);
       const freshFile = (_d = this.app.vault.getAbstractFileByPath(freshPath)) != null ? _d : file;
       try {
@@ -1610,6 +1620,24 @@ ${data.content}
     }
     return links;
   }
+  hasExternalSourceOrUrl(content, frontmatter, tags) {
+    if (frontmatter) {
+      if (frontmatter.type === "reference") return true;
+      if (frontmatter.source && typeof frontmatter.source === "string" && /https?:\/\/[^\s\)]+/i.test(frontmatter.source)) return true;
+    }
+    const externalKeywords = ["web-clippings", "clippings", "reference", "source", "external-source", "clipping", "article", "paper", "web", "news"];
+    for (const tag of tags) {
+      const cleanTag = tag.replace(/^#/, "").trim().toLowerCase();
+      if (externalKeywords.some((kw) => cleanTag.includes(kw))) {
+        return true;
+      }
+    }
+    const body = this.stripFrontmatter(content);
+    if (/https?:\/\/[^\s\)]+/i.test(body)) {
+      return true;
+    }
+    return false;
+  }
 };
 
 // src/articleProcessor.ts
@@ -1686,7 +1714,7 @@ var ArticleProcessorEngine = class {
     this.temperature = temperature;
   }
   async processFile(file) {
-    var _a;
+    var _a, _b;
     try {
       const content = await this.app.vault.read(file);
       const urlMatch = content.match(/URL:\s*(https?:\/\/[^\s]+)/i) || content.match(/Source:\s*(https?:\/\/[^\s]+)/i);
@@ -1805,6 +1833,22 @@ ${content}${existingTagsContext}${relatedContext}`;
       }
       await this.app.vault.modify(file, originalFmFull + ontologyRestoredBody + relatedSection + imagesSection);
       let suggestedTitle = file.basename;
+      let destinationFolder = "";
+      let shouldMove = false;
+      const parentPath = ((_a = file.parent) == null ? void 0 : _a.path) || "";
+      const isInInbox = parentPath === "00_Inbox" || parentPath === "00_\u6536\u4EF6\u7BB1";
+      if (isInInbox) {
+        const currentFileContent = await this.app.vault.read(file);
+        const cache = this.app.metadataCache.getFileCache(file);
+        const frontmatter = (cache == null ? void 0 : cache.frontmatter) || {};
+        const tags = this.getFileTags(file);
+        if (this.hasExternalSourceOrUrl(currentFileContent, frontmatter, tags)) {
+          destinationFolder = "01_Sources";
+        } else {
+          destinationFolder = "88_Archive";
+        }
+        shouldMove = true;
+      }
       await this.app.fileManager.processFrontMatter(file, (fm) => {
         for (const [key, value] of Object.entries(ontology.preservedFrontmatter)) {
           if (!(key in fm)) {
@@ -1819,7 +1863,7 @@ ${content}${existingTagsContext}${relatedContext}`;
         fm["type"] = "reference";
         fm["captured"] = today;
         if (sourceUrl) fm["source"] = sourceUrl;
-        if (finalCategory) fm["category"] = finalCategory;
+        fm["category"] = shouldMove ? destinationFolder : finalCategory;
         const tagsMatch2 = llmFmString.match(/tags:\s*(.+)/i);
         let rawTags2 = [];
         if (tagsMatch2) {
@@ -1828,12 +1872,14 @@ ${content}${existingTagsContext}${relatedContext}`;
         const existingTags = Array.isArray(fm["tags"]) ? fm["tags"].map((t) => t.replace(/^#/, "")) : [];
         fm["tags"] = Array.from(/* @__PURE__ */ new Set([...existingTags, ...rawTags2, ...ontology.frontmatterTags, "web-clippings"]));
       });
-      if (finalCategory) {
+      if (shouldMove) {
+        await this.moveFileToCategory(file, destinationFolder);
+      } else if (finalCategory) {
         await this.moveFileToCategory(file, finalCategory);
       }
       const newBaseName = suggestedTitle.replace(/[\\/:"*?<>|#^\[\]]/g, "").trim().slice(0, 50);
       if (newBaseName && newBaseName !== file.basename) {
-        const parentDirPath = ((_a = file.parent) == null ? void 0 : _a.path) || "";
+        const parentDirPath = ((_b = file.parent) == null ? void 0 : _b.path) || "";
         const newPath = (0, import_obsidian8.normalizePath)(`${parentDirPath}/${newBaseName}.md`);
         if (!this.app.vault.getAbstractFileByPath(newPath)) {
           await this.app.vault.rename(file, newPath);
@@ -2061,6 +2107,24 @@ ${content}
       links.add(m[1].trim());
     }
     return links;
+  }
+  hasExternalSourceOrUrl(content, frontmatter, tags) {
+    if (frontmatter) {
+      if (frontmatter.type === "reference") return true;
+      if (frontmatter.source && typeof frontmatter.source === "string" && /https?:\/\/[^\s\)]+/i.test(frontmatter.source)) return true;
+    }
+    const externalKeywords = ["web-clippings", "clippings", "reference", "source", "external-source", "clipping", "article", "paper", "web", "news"];
+    for (const tag of tags) {
+      const cleanTag = tag.replace(/^#/, "").trim().toLowerCase();
+      if (externalKeywords.some((kw) => cleanTag.includes(kw))) {
+        return true;
+      }
+    }
+    const body = this.stripFrontmatter(content);
+    if (/https?:\/\/[^\s\)]+/i.test(body)) {
+      return true;
+    }
+    return false;
   }
 };
 

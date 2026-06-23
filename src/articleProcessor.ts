@@ -263,6 +263,26 @@ export class ArticleProcessorEngine {
 
       // Now merge newly discovered properties safely using Obsidian API
       let suggestedTitle = file.basename;
+      let destinationFolder = "";
+      let shouldMove = false;
+
+      const parentPath = file.parent?.path || "";
+      const isInInbox = (parentPath === "00_Inbox" || parentPath === "00_收件箱");
+
+      if (isInInbox) {
+         const currentFileContent = await this.app.vault.read(file);
+         const cache = this.app.metadataCache.getFileCache(file);
+         const frontmatter = cache?.frontmatter || {};
+         const tags = this.getFileTags(file);
+
+         if (this.hasExternalSourceOrUrl(currentFileContent, frontmatter, tags)) {
+            destinationFolder = "01_Sources";
+         } else {
+            destinationFolder = "88_Archive";
+         }
+         shouldMove = true;
+      }
+
       await this.app.fileManager.processFrontMatter(file, (fm) => {
          // Preserve all original frontmatter keys that the LLM doesn't manage
          for (const [key, value] of Object.entries(ontology.preservedFrontmatter)) {
@@ -280,7 +300,7 @@ export class ArticleProcessorEngine {
          fm["type"] = "reference";
          fm["captured"] = today;
          if (sourceUrl) fm["source"] = sourceUrl;
-         if (finalCategory) fm["category"] = finalCategory;
+         fm["category"] = shouldMove ? destinationFolder : finalCategory;
          
          const tagsMatch = llmFmString.match(/tags:\s*(.+)/i);
          let rawTags: string[] = [];
@@ -295,7 +315,9 @@ export class ArticleProcessorEngine {
          fm["tags"] = Array.from(new Set([...existingTags, ...rawTags, ...ontology.frontmatterTags, "web-clippings"]));
       });
 
-      if (finalCategory) {
+      if (shouldMove) {
+         await this.moveFileToCategory(file, destinationFolder);
+      } else if (finalCategory) {
          await this.moveFileToCategory(file, finalCategory);
       }
 
@@ -595,5 +617,24 @@ ${content}
       links.add(m[1].trim());
     }
     return links;
+  }
+
+  private hasExternalSourceOrUrl(content: string, frontmatter: any, tags: string[]): boolean {
+    if (frontmatter) {
+      if (frontmatter.type === "reference") return true;
+      if (frontmatter.source && typeof frontmatter.source === "string" && /https?:\/\/[^\s\)]+/i.test(frontmatter.source)) return true;
+    }
+    const externalKeywords = ["web-clippings", "clippings", "reference", "source", "external-source", "clipping", "article", "paper", "web", "news"];
+    for (const tag of tags) {
+      const cleanTag = tag.replace(/^#/, "").trim().toLowerCase();
+      if (externalKeywords.some(kw => cleanTag.includes(kw))) {
+        return true;
+      }
+    }
+    const body = this.stripFrontmatter(content);
+    if (/https?:\/\/[^\s\)]+/i.test(body)) {
+      return true;
+    }
+    return false;
   }
 }
