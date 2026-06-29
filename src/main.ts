@@ -149,6 +149,23 @@ export default class LocalAgentPlugin extends Plugin {
       })
     );
 
+    // Add Context Menu: Right-Click in Editor (Translation)
+    this.registerEvent(
+      this.app.workspace.on("editor-menu", (menu, editor, view) => {
+        const selection = editor.getSelection();
+        if (selection && selection.trim() !== "") {
+          menu.addItem((item) => {
+            item
+              .setTitle("翻譯選取文字（中英互譯）")
+              .setIcon("languages")
+              .onClick(async () => {
+                await this.translateText(editor, selection);
+              });
+          });
+        }
+      })
+    );
+
     // ----- Commands --------------------------------------------------------
 
     // Module 2: Classify the active note

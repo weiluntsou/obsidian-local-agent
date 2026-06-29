@@ -3798,6 +3798,18 @@ var LocalAgentPlugin = class extends import_obsidian14.Plugin {
         }
       })
     );
+    this.registerEvent(
+      this.app.workspace.on("editor-menu", (menu, editor, view) => {
+        const selection = editor.getSelection();
+        if (selection && selection.trim() !== "") {
+          menu.addItem((item) => {
+            item.setTitle("\u7FFB\u8B6F\u9078\u53D6\u6587\u5B57\uFF08\u4E2D\u82F1\u4E92\u8B6F\uFF09").setIcon("languages").onClick(async () => {
+              await this.translateText(editor, selection);
+            });
+          });
+        }
+      })
+    );
     this.addCommand({
       id: "classify-active-note",
       name: "\u5206\u985E\u76EE\u524D\u7B46\u8A18\uFF08\u6A19\u7C64\u548C\u5206\u985E\uFF09",
