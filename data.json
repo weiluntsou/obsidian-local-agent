@@ -1,6 +1,6 @@
 {
   "apiEndpoint": "http://127.0.0.1:8000",
-  "defaultModel": "gemma-4-e4b-it-8bit",
+  "defaultModel": "gemma-4-E4B-Agentic-Opus-Reasoning-GeminiCLI-mlx-4bit",
   "inputFolder": "Daily Notes",
   "outputFolder": "Insights",
   "maxFilesToProcess": 20,

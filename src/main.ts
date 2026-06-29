@@ -20,6 +20,7 @@
 
 import {
   App,
+  Editor,
   MarkdownView,
   Notice,
   Plugin,
@@ -236,6 +237,21 @@ export default class LocalAgentPlugin extends Plugin {
         } else {
           new Notice("請先開啟一篇筆記來進行清掃！");
         }
+      },
+    });
+
+    // ----- Translation Commands --------------------------------------------
+
+    this.addCommand({
+      id: "translate-selected-text",
+      name: "翻譯選取文字（中英互譯）",
+      editorCallback: async (editor: Editor) => {
+        const selection = editor.getSelection();
+        if (!selection || selection.trim() === "") {
+          new Notice("請先選取想要翻譯的文字！");
+          return;
+        }
+        await this.translateText(editor, selection);
       },
     });
 
@@ -929,6 +945,60 @@ export default class LocalAgentPlugin extends Plugin {
   }
 
   // ---- Utility ------------------------------------------------------------
+
+  /**
+   * Translates the selected text using the local LLM.
+   * If the text contains Chinese characters, it translates it to English.
+   * Otherwise, it translates it to Traditional Chinese.
+   * 
+   * When target is English, it respects the user's setting for replacing vs inserting.
+   * When target is Chinese, it always replaces the selection.
+   */
+  private async translateText(editor: Editor, text: string): Promise<void> {
+    const isChinese = /[\u4e00-\u9fa5]/.test(text);
+
+    this.setStatusBarText("正在進行翻譯...");
+    new Notice("正在調用本機模型進行翻譯...");
+
+    try {
+      let systemPrompt = "";
+      if (isChinese) {
+        systemPrompt = "你是一位精準的翻譯助手。請將用戶輸入的中文內容翻譯成流暢、地道的英文。不要有任何解釋、前言、或者額外的說明，直接返回翻譯後的英文內容。";
+      } else {
+        systemPrompt = "你是一位精準的翻譯助手。請將用戶輸入的內容翻譯成流暢、地道的繁體中文。不要有任何解釋、前言、或者額外的說明，直接返回翻譯後的中文內容。";
+      }
+
+      const translation = await this.apiClient.prompt(systemPrompt, text, 0.3);
+
+      if (!translation || translation.trim() === "") {
+        new Notice("翻譯失敗，模型返回了空內容。");
+        return;
+      }
+
+      const trimmedTranslation = translation.trim();
+
+      if (isChinese) {
+        const behavior = this.settings.englishTranslationBehavior || "replace";
+        if (behavior === "insert") {
+          const endPos = editor.getCursor("to");
+          const endLine = endPos.line;
+          const endLineText = editor.getLine(endLine);
+          editor.replaceRange("\n" + trimmedTranslation, { line: endLine, ch: endLineText.length });
+          new Notice("翻譯完成，已插入至下一行。");
+        } else {
+          editor.replaceSelection(trimmedTranslation);
+          new Notice("翻譯完成，已置換選取內容。");
+        }
+      } else {
+        editor.replaceSelection(trimmedTranslation);
+        new Notice("翻譯完成，已置換選取內容。");
+      }
+    } catch (error) {
+      new Notice(`翻譯出錯：${(error as Error).message}`);
+    } finally {
+      this.setStatusBarText("");
+    }
+  }
 
   /**
    * Strip YAML frontmatter from a markdown string, returning only the body.

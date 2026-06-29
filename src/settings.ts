@@ -85,6 +85,9 @@ export interface LocalAgentSettings {
 
   /** Filename for the identity description file (inside secondSelfFolder). */
   identityFileName: string;
+
+  /** Behavior when translating Chinese selection to English: 'replace' or 'insert'. */
+  englishTranslationBehavior: "replace" | "insert";
 }
 
 export const DEFAULT_SETTINGS: LocalAgentSettings = {
@@ -103,6 +106,8 @@ export const DEFAULT_SETTINGS: LocalAgentSettings = {
   // Second Self paths
   secondSelfFolder: "04_Second_Self",
   identityFileName: "IDENTITY.md",
+  // Translation
+  englishTranslationBehavior: "replace",
 };
 
 // ---------------------------------------------------------------------------
@@ -391,6 +396,23 @@ export class LocalAgentSettingTab extends PluginSettingTab {
           .setDynamicTooltip()
           .onChange(async (value) => {
             this.plugin.settings.refinementTemperature = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    // --- Section: Translation Settings ------------------------------------
+    containerEl.createEl("h2", { text: "翻譯功能設定" });
+
+    new Setting(containerEl)
+      .setName("英文翻譯插入方式")
+      .setDesc("當選取的中文文字被翻譯為英文時，翻譯結果的處理方式。")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("replace", "置換選取內容")
+          .addOption("insert", "插入在下一行")
+          .setValue(this.plugin.settings.englishTranslationBehavior || "replace")
+          .onChange(async (value) => {
+            this.plugin.settings.englishTranslationBehavior = value as "replace" | "insert";
             await this.plugin.saveSettings();
           })
       );

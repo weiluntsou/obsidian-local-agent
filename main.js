@@ -3543,7 +3543,9 @@ var DEFAULT_SETTINGS = {
   cloudModel: "gemini-3.1-flash-lite",
   // Second Self paths
   secondSelfFolder: "04_Second_Self",
-  identityFileName: "IDENTITY.md"
+  identityFileName: "IDENTITY.md",
+  // Translation
+  englishTranslationBehavior: "replace"
 };
 var LocalAgentSettingTab = class extends import_obsidian13.PluginSettingTab {
   constructor(app, plugin) {
@@ -3713,6 +3715,13 @@ var LocalAgentSettingTab = class extends import_obsidian13.PluginSettingTab {
         await this.plugin.saveSettings();
       })
     );
+    containerEl.createEl("h2", { text: "\u7FFB\u8B6F\u529F\u80FD\u8A2D\u5B9A" });
+    new import_obsidian13.Setting(containerEl).setName("\u82F1\u6587\u7FFB\u8B6F\u63D2\u5165\u65B9\u5F0F").setDesc("\u7576\u9078\u53D6\u7684\u4E2D\u6587\u6587\u5B57\u88AB\u7FFB\u8B6F\u70BA\u82F1\u6587\u6642\uFF0C\u7FFB\u8B6F\u7D50\u679C\u7684\u8655\u7406\u65B9\u5F0F\u3002").addDropdown(
+      (dropdown) => dropdown.addOption("replace", "\u7F6E\u63DB\u9078\u53D6\u5167\u5BB9").addOption("insert", "\u63D2\u5165\u5728\u4E0B\u4E00\u884C").setValue(this.plugin.settings.englishTranslationBehavior || "replace").onChange(async (value) => {
+        this.plugin.settings.englishTranslationBehavior = value;
+        await this.plugin.saveSettings();
+      })
+    );
   }
 };
 
@@ -3857,6 +3866,18 @@ var LocalAgentPlugin = class extends import_obsidian14.Plugin {
         } else {
           new import_obsidian14.Notice("\u8ACB\u5148\u958B\u555F\u4E00\u7BC7\u7B46\u8A18\u4F86\u9032\u884C\u6E05\u6383\uFF01");
         }
+      }
+    });
+    this.addCommand({
+      id: "translate-selected-text",
+      name: "\u7FFB\u8B6F\u9078\u53D6\u6587\u5B57\uFF08\u4E2D\u82F1\u4E92\u8B6F\uFF09",
+      editorCallback: async (editor) => {
+        const selection = editor.getSelection();
+        if (!selection || selection.trim() === "") {
+          new import_obsidian14.Notice("\u8ACB\u5148\u9078\u53D6\u60F3\u8981\u7FFB\u8B6F\u7684\u6587\u5B57\uFF01");
+          return;
+        }
+        await this.translateText(editor, selection);
       }
     });
     this.addCommand({
@@ -4415,6 +4436,53 @@ var LocalAgentPlugin = class extends import_obsidian14.Plugin {
     }
   }
   // ---- Utility ------------------------------------------------------------
+  /**
+   * Translates the selected text using the local LLM.
+   * If the text contains Chinese characters, it translates it to English.
+   * Otherwise, it translates it to Traditional Chinese.
+   * 
+   * When target is English, it respects the user's setting for replacing vs inserting.
+   * When target is Chinese, it always replaces the selection.
+   */
+  async translateText(editor, text) {
+    const isChinese = /[\u4e00-\u9fa5]/.test(text);
+    this.setStatusBarText("\u6B63\u5728\u9032\u884C\u7FFB\u8B6F...");
+    new import_obsidian14.Notice("\u6B63\u5728\u8ABF\u7528\u672C\u6A5F\u6A21\u578B\u9032\u884C\u7FFB\u8B6F...");
+    try {
+      let systemPrompt = "";
+      if (isChinese) {
+        systemPrompt = "\u4F60\u662F\u4E00\u4F4D\u7CBE\u6E96\u7684\u7FFB\u8B6F\u52A9\u624B\u3002\u8ACB\u5C07\u7528\u6236\u8F38\u5165\u7684\u4E2D\u6587\u5167\u5BB9\u7FFB\u8B6F\u6210\u6D41\u66A2\u3001\u5730\u9053\u7684\u82F1\u6587\u3002\u4E0D\u8981\u6709\u4EFB\u4F55\u89E3\u91CB\u3001\u524D\u8A00\u3001\u6216\u8005\u984D\u5916\u7684\u8AAA\u660E\uFF0C\u76F4\u63A5\u8FD4\u56DE\u7FFB\u8B6F\u5F8C\u7684\u82F1\u6587\u5167\u5BB9\u3002";
+      } else {
+        systemPrompt = "\u4F60\u662F\u4E00\u4F4D\u7CBE\u6E96\u7684\u7FFB\u8B6F\u52A9\u624B\u3002\u8ACB\u5C07\u7528\u6236\u8F38\u5165\u7684\u5167\u5BB9\u7FFB\u8B6F\u6210\u6D41\u66A2\u3001\u5730\u9053\u7684\u7E41\u9AD4\u4E2D\u6587\u3002\u4E0D\u8981\u6709\u4EFB\u4F55\u89E3\u91CB\u3001\u524D\u8A00\u3001\u6216\u8005\u984D\u5916\u7684\u8AAA\u660E\uFF0C\u76F4\u63A5\u8FD4\u56DE\u7FFB\u8B6F\u5F8C\u7684\u4E2D\u6587\u5167\u5BB9\u3002";
+      }
+      const translation = await this.apiClient.prompt(systemPrompt, text, 0.3);
+      if (!translation || translation.trim() === "") {
+        new import_obsidian14.Notice("\u7FFB\u8B6F\u5931\u6557\uFF0C\u6A21\u578B\u8FD4\u56DE\u4E86\u7A7A\u5167\u5BB9\u3002");
+        return;
+      }
+      const trimmedTranslation = translation.trim();
+      if (isChinese) {
+        const behavior = this.settings.englishTranslationBehavior || "replace";
+        if (behavior === "insert") {
+          const endPos = editor.getCursor("to");
+          const endLine = endPos.line;
+          const endLineText = editor.getLine(endLine);
+          editor.replaceRange("\n" + trimmedTranslation, { line: endLine, ch: endLineText.length });
+          new import_obsidian14.Notice("\u7FFB\u8B6F\u5B8C\u6210\uFF0C\u5DF2\u63D2\u5165\u81F3\u4E0B\u4E00\u884C\u3002");
+        } else {
+          editor.replaceSelection(trimmedTranslation);
+          new import_obsidian14.Notice("\u7FFB\u8B6F\u5B8C\u6210\uFF0C\u5DF2\u7F6E\u63DB\u9078\u53D6\u5167\u5BB9\u3002");
+        }
+      } else {
+        editor.replaceSelection(trimmedTranslation);
+        new import_obsidian14.Notice("\u7FFB\u8B6F\u5B8C\u6210\uFF0C\u5DF2\u7F6E\u63DB\u9078\u53D6\u5167\u5BB9\u3002");
+      }
+    } catch (error) {
+      new import_obsidian14.Notice(`\u7FFB\u8B6F\u51FA\u932F\uFF1A${error.message}`);
+    } finally {
+      this.setStatusBarText("");
+    }
+  }
   /**
    * Strip YAML frontmatter from a markdown string, returning only the body.
    */
