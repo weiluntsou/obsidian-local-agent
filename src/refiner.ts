@@ -34,10 +34,12 @@ const REFINER_SYSTEM_PROMPT = `你是一位專業的知識精修與摘要引擎�
 你必須輸出恰好一個結構化的 JSON（JSON 資料格式）物件。請仔細閱讀輸入的筆記（包含檔名作為參考），並執行以下六個操作：
 
 1. 標題優化（TITLE）：評估原始標題是否與內容高度相關。如果無關或是無意義名稱，請根據內容給出一個20字以內的新繁體中文標題。如果原始標題包含日期資訊（如 2026-04-17），必須保留於新標題中。若原標題已經貼切貼於內容，請直接回傳原標題。
-2. 摘要（SUMMARY）：提供對核心概念的簡潔摘要。
+2. 原文關鍵句摘錄（ORIGINAL_QUOTES）：從原始英文文本中挑選並「逐字摘錄」3 至 5 句最核心、最有節奏感且獨立成立的英文關鍵句。
 3. 關鍵詞彙（KEYWORDS）：提取技術用語（technical terms），並提供英文至繁體中文的詞彙對照表。如果原始文本已為中文，可略過此步或提供中文概念的英文譯詞。
-4. 重點提取（HIGHLIGHTS）：謹挑選高價值、有實用性的段落或句子。重新清晰地改寫，去除所有樣板文本、冗餘內容和不必要的背景說明。
-5. 原子化概念（ATOMIZATION）：如果文章中包含不同的、高價值的技巧、概念或思維模型（例如：特定的「執行緒管理（Thread Management）」技巧），請將其萃取為獨立的原子化筆記。
+4. 重點提取（HIGHLIGHTS）：合併摘要跟重點提取，寫成一個重點提取。必須在 "highlights" 陣列的第一個元素放入對核心概念的簡潔總結（摘要，約一至二句話），隨後元素為謹挑選高價值、有實用性的段落或句子（重新清晰地改寫，去除所有樣板文本、冗餘內容 and 不必要的背景說明）。
+5. 催化問題（CATALYST_QUESTIONS）：生成 1 至 3 個緊扣文章範圍的催化思考問題。
+   - 題目必須能只用這篇文章的內容回答，絕對不能要求使用者動用文章以外的產業知識或做開放式價值判斷（例如「我們是否投入過多資源」這種題目要淘汰）。
+   - 題目形式優先用「如果應用在你的情境會怎樣」，而不是「你對這個現象的整體看法是什麼」。
 6. 分類（CLASSIFICATION）：將內容分類到五大支柱（Five Pillars）中的恰好一個。
 
 五大支柱：
@@ -47,23 +49,23 @@ const REFINER_SYSTEM_PROMPT = `你是一位專業的知識精修與摘要引擎�
 - 40_自託管實驗室
 - 00_收件箱
 
-預期的 JSON 結構：
+預期的 JSON 結構（注意 originalQuotes 放在最前，讓您先進行摘錄再做後續精修）：
 {
   "suggestedTitle": "新的或原來的標題",
-  "summary": "簡潔摘要...",
+  "originalQuotes": [
+    { "quote": "英文原句，逐字複製，不改寫不翻譯", "source": "出處段落關鍵字或小標題" }
+  ],
   "keywords": [
     { "en": "English Term", "zh": "繁體中文翻譯" }
   ],
   "highlights": [
+    "對核心概念的一至二句話簡潔總結（摘要）",
     "高價值段落 1...",
     "高價值段落 2..."
   ],
-  "atomicNotes": [
-    {
-      "title": "特定概念名稱",
-      "content": "對該概念的詳細解釋...",
-      "tags": ["#標籤1", "#標籤2"]
-    }
+  "catalystQuestions": [
+    "如果你現在設計一個 agent prompt，靜態前綴要放哪些內容，才不會讓快取失效？",
+    "你過去寫過的 prompt 裡，有沒有可能順序問題而觸發過 cache miss？"
   ],
   "category": "20_學術與電腦科學",
   "tags": ["#標籤1", "#標籤2", "#標籤3"],
@@ -73,21 +75,83 @@ const REFINER_SYSTEM_PROMPT = `你是一位專業的知識精修與摘要引擎�
 規則：
 1. "category" 必須精確符合五大支柱中的其中一個。
 2. "tags" 應包含 3 至 5 個子主題。
-3. 在選擇重點提取時要評選謹慎。如果整篇文本毫無價值，"highlights" 可以為空。
-4. "atomicNotes" 應只包含高度具體且可重複使用的洞見。如無不同的概念，不強行建立。
-5. 「摘要」、「關鍵詞彙」（中文部分）、「重點提取」和「原子化筆記.內容」中的所有文本必須為繁體中文（zh-TW）。
-7. 為了增加知識庫的關聯性，請參考輸入中提供的「知識庫現有標籤」列表。如果內容與現有標籤相關，請優先選用這些已存在的標籤。若現有標籤皆不適用，方可根據內容生成新的標籤。標籤格式須以「#」開頭。
-8. 請參考輸入中的「關聯筆記候選清單」。若在撰寫「摘要」、「重點提取」或「原子化概念」內容時提到候選清單中的概念或頁面，請使用雙層括號 '[[筆記名稱]]'（例如 [[Docker]]）進行雙向連結，建立知識網路。`;
+3. "originalQuotes" 規則：
+   - 必須是原文逐字複製，禁止改寫、簡化、翻譯。
+   - 挑選標準：句子本身要有獨立完整的意義（不能是「it changed everything」這種需要前後文才懂的句子）。
+   - 優先挑選有節奏感、修辭手法（對仗、重複、反轉）的句子。
+   - 字數上限：每句不超過 40 字，避免摘錄整段。
+   - 每句後面不附中文翻譯。
+   - 必須挑選 3 到 5 句。
+4. 在選擇重點提取時要評選謹慎。如果整篇文本毫無價值，第一個元素放摘要後，其餘 highlights 可以為空。
+5. "catalystQuestions" 應為 1 到 3 個與文章內容緊扣的問題，用以啟發使用者將其應用於自身情境。
+6. 「關鍵詞彙」（中文部分）和「重點提取」中的所有文本必須為繁體中文（zh-TW）。
+7. 「反思（Reflection）」區塊為使用者手動維護區，系統僅生成區塊標題與格式骨架，不得填入任何內文，亦不得在 JSON 中輸出「反思」區塊的內容，違反此規則視為格式錯誤。
+8. 為了增加知識庫的關聯性，請參考輸入中提供的「知識庫現有標籤」列表。如果內容與現有標籤相關，請優先選用這些已存在的標籤。若現有標籤皆不適用，方可根據內容生成新的標籤。標籤格式須以「#」開頭。
+9. 請參考輸入中提供的「關聯筆記候選清單」。若在撰寫「重點提取」內容時提到候選清單中的概念或頁面，請使用雙層括號 '[[筆記名稱]]'（例如 [[Docker]]）進行雙向連結，建立知識網路。`;
+
+const EVALUATE_AND_REFLECT_SYSTEM_PROMPT = `你是一位專業的知識分析與思維判讀引擎。
+你會收到：
+1. 筆記的摘要與重點提取。
+2. 催化問題（1-3題）。
+3. 使用者對催化問題的簡短回答。
+
+請執行以下判讀與生成任務，並輸出恰好一個結構化的 JSON（JSON 資料格式）物件：
+
+1. 判讀思考痕跡（PASSED）：
+   AI 讀使用者對催化問題的回答，判斷思考痕跡深淺。判斷依據只看質，不看量：
+   - 有沒有出現「我覺得」「應該是」「但」「如果」這類代表使用者在下判斷、而非單純複述的語言標記。
+   - 有沒有具體connect到使用者自己的情境／過去經驗（哪怕只有一句話）。
+   - 即使只有半句、字數很少，只要方向是「回應問題」而非「留白／無意義內容／純複製文章句子」，就算通過（passed 設為 true）。
+   - 如果完全空白、純複製文章句子、或是回答與問題完全無關的胡言亂語，則判定不通過（passed 設為 false）。
+
+2. 生成反思（REFLECTION）：
+   - chineseReflection（中文完整反思）：根據使用者對催化問題的回答，結合文章內容，為使用者生成一段深度、完整的中文反思（約2-3句）。
+
+3. 自動決定拆解深度：
+   - 若 passed 為 true（通過）：
+     - atomicNotes（原子化概念）：提取文章中高價值的獨立概念，並生成原子筆記。
+       【極重要規則】：你必須「直接把使用者對催化問題的回答」，作為原子筆記的開場定義句（第一句話），絕對不能重新用文章的話去寫！然後再圍繞這個概念結合文章內容進行補充和展開。
+     - relatedLinks（相關連結與原因）：分析使用者知識庫中可能關聯的筆記，列出相關連結並附上具體理由（包含推薦該關聯的原因）。格式為陣列，包含 { "noteName": "連結名稱", "reason": "推薦理由" }。
+   - 若 passed 為 false（沒通過）：
+     - atomicNotes 必須為空陣列。
+     - relatedLinks 必須為空陣列。
+     - lightweightLabel（輕量標籤）：生成一句話的輕量標籤，例如：對此主題的簡短一句話分類或核心屬性描述（繁體中文，約10-20字），作為沒通過時的輕量記錄。
+
+預期的 JSON 結構：
+{
+  "passed": true,
+  "chineseReflection": "基於您的回答與文章內容，...",
+  "atomicNotes": [
+    {
+      "title": "概念名稱",
+      "content": "使用者的回答（作為第一句）。接著是基於文章內容對該概念的詳細解釋、用途、應用場景等...",
+      "tags": ["#標籤1", "#標籤2"]
+    }
+  ],
+  "relatedLinks": [
+    { "noteName": "相關筆記名稱", "reason": "因為您在回答中提到..." }
+  ],
+  "lightweightLabel": ""
+}
+`;
 
 interface RefinerResult {
   suggestedTitle: string;
-  summary: string;
+  originalQuotes?: { quote: string; source: string }[];
   keywords: { en: string; zh: string }[];
   highlights: string[];
-  atomicNotes?: { title: string; content: string; tags: string[] }[];
   category: string;
   tags: string[];
   confidence: number;
+  catalystQuestions?: string[];
+}
+
+interface Phase2Result {
+  passed: boolean;
+  chineseReflection: string;
+  atomicNotes: { title: string; content: string; tags: string[] }[];
+  relatedLinks: { noteName: string; reason: string }[];
+  lightweightLabel: string;
 }
 
 export class NoteRefinerEngine {
@@ -150,16 +214,56 @@ export class NoteRefinerEngine {
 
       const parsed = parseJsonFromLLM<RefinerResult>(rawResponse);
 
-      if (!parsed || !parsed.summary || !Array.isArray(parsed.highlights)) {
+      if (!parsed || !Array.isArray(parsed.highlights) || parsed.highlights.length === 0) {
         new Notice("大型語言模型（LLM）回傳的 JSON 結構非預期。請檢查主控台。");
         console.error("[NoteRefinerEngine] Invalid response:", rawResponse);
         return;
       }
 
-      // 1. Create Atomic Notes (with ontology-aware back-link to source)
+      // --- Catalyst Questions Prompt Flow (Sequential Modal) ---
+      const questions = parsed.catalystQuestions && parsed.catalystQuestions.length > 0
+        ? parsed.catalystQuestions
+        : ["如果你現在將此文章應用在你的情境，會遇到什麼挑戰？"];
+
+      const catalyst = new ViewpointCatalyst(
+        this.app,
+        this.apiClient,
+        this.temperature
+      );
+
+      // Prompt user with catalyst questions (blocks refinement flow until resolved)
+      const userAnswer = await catalyst.promptUser(file.basename, questions);
+
+      new Notice("🧠 正在判讀思考痕跡並決定拆解深度...");
+
+      const phase2UserPrompt = `【筆記標題】：${file.basename}
+【摘要與重點提取】：
+${parsed.highlights.join("\n")}
+
+【催化問題】：
+${questions.map((q, idx) => `${idx + 1}. ${q}`).join("\n")}
+
+【使用者的簡短回答】：
+${userAnswer || "（使用者跳過了回答，未提供思考痕跡）"}`;
+
+      const rawPhase2Response = await this.apiClient.prompt(
+        EVALUATE_AND_REFLECT_SYSTEM_PROMPT,
+        phase2UserPrompt,
+        this.temperature
+      );
+
+      const parsedPhase2 = parseJsonFromLLM<Phase2Result>(rawPhase2Response) || {
+        passed: false,
+        chineseReflection: "",
+        atomicNotes: [],
+        relatedLinks: [],
+        lightweightLabel: "未通過思考痕跡判讀"
+      };
+
+      // 1. Create Atomic Notes if passed (with ontology-aware back-link to source)
       const atomicLinks: string[] = [];
-      if (parsed.atomicNotes && Array.isArray(parsed.atomicNotes)) {
-        for (const atomic of parsed.atomicNotes) {
+      if (parsedPhase2 && parsedPhase2.passed && parsedPhase2.atomicNotes && Array.isArray(parsedPhase2.atomicNotes)) {
+        for (const atomic of parsedPhase2.atomicNotes) {
           const fileName = this.sanitizeFileName(atomic.title);
           const link = await this.createAtomicNote(fileName, atomic, parsed.category, file.basename);
           if (link) {
@@ -168,19 +272,45 @@ export class NoteRefinerEngine {
         }
       }
 
-      // 2. Find post-LLM related notes based on new tags/keywords
-      const llmLinks = this.extractWikilinks(rawResponse);
-      const postLlmRelated = this.findRelatedNotes(
-        file,
-        parsed.tags || [],
-        parsed.keywords || [],
-        parsed.suggestedTitle || file.basename,
-        llmLinks,
-        5
-      );
+      // Capture original quotes to preserve
+      const originalQuotes = this.captureSection(originalContent, "原文關鍵句摘錄 (Original Quotes)");
 
-      // 3. Build newly refined content
-      const refinedBody = this.buildRefinedContent(parsed, atomicLinks, postLlmRelated);
+      const defaultQuotes = `## 原文關鍵句摘錄 (Original Quotes)
+
+> "[英文原句，逐字摘錄，不改寫、不翻譯]"
+> — 出處段落關鍵字（例如：What a loop is actually made of）
+
+> ""
+> — 
+
+> ""
+> — 
+
+> ""
+> — 
+
+<!--
+【規則】
+- 禁止改寫、簡化、翻譯此區塊句子——必須是原文逐字複製。
+- 挑選標準：句子本身要有獨立完整的意義（不能是「it changed everything」這種需要前後文才懂的句子）。
+- 優先挑選有節奏感、修辭手法（對仗、重複、反轉）的句子。
+- 每句後面不附中文翻譯。
+- 字數上限：每句不超過40字。
+-->`;
+
+      let finalQuotes = "";
+      if (this.isQuotesEmptyOrPlaceholder(originalQuotes)) {
+        if (parsed.originalQuotes && parsed.originalQuotes.length > 0) {
+          finalQuotes = this.formatOriginalQuotes(parsed.originalQuotes);
+        } else {
+          finalQuotes = defaultQuotes;
+        }
+      } else {
+        finalQuotes = originalQuotes;
+      }
+
+      // 2. Build newly refined content
+      const refinedBody = this.buildRefinedContent(parsed, parsedPhase2, atomicLinks, finalQuotes, questions, userAnswer);
 
       // ── Ontology Re-injection: restore any missing wikilinks & tags ──
       const ontologyRestoredBody = this.restoreOntology(refinedBody, ontology);
@@ -203,7 +333,6 @@ export class NoteRefinerEngine {
       }
 
       if (isInInbox) {
-        // Read file's current content and tags to determine if it has external source or URL
         const currentFileContent = await this.app.vault.read(file);
         const cache = this.app.metadataCache.getFileCache(file);
         const frontmatter = cache?.frontmatter || {};
@@ -233,6 +362,13 @@ export class NoteRefinerEngine {
         
         // Add a flag that this was refined
         frontmatter["refined"] = true;
+
+        if (parsedPhase2) {
+          frontmatter["reflection_passed"] = parsedPhase2.passed;
+          if (parsedPhase2.lightweightLabel) {
+            frontmatter["lightweight_label"] = parsedPhase2.lightweightLabel;
+          }
+        }
       });
 
       // We read again to get the file with updated frontmatter, then replace its body
@@ -279,18 +415,6 @@ export class NoteRefinerEngine {
       const freshPath = normalizePath(`${movedCategory}/${finalName}.md`);
       const freshFile = (this.app.vault.getAbstractFileByPath(freshPath) as TFile) ?? file;
 
-      // Feature 1: Viewpoint Catalyst (blocking modal for external sources)
-      try {
-        const catalyst = new ViewpointCatalyst(
-          this.app,
-          this.apiClient,
-          this.temperature
-        );
-        await catalyst.challenge(freshFile);
-      } catch (err) {
-        console.error("[NoteRefinerEngine] Viewpoint Catalyst error:", err);
-      }
-
       // Feature 2: Contradiction Radar (background, non-blocking)
       try {
         const radar = new ContradictionRadar(
@@ -325,28 +449,42 @@ export class NoteRefinerEngine {
     }
   }
 
-  private buildRefinedContent(parsed: RefinerResult, atomicLinks: string[], relatedLinks?: string[]): string {
+  private buildRefinedContent(
+    parsedPhase1: RefinerResult,
+    parsedPhase2: Phase2Result | null,
+    atomicLinks: string[],
+    originalQuotesContent: string,
+    questions: string[],
+    userAnswer: string | null
+  ): string {
     const parts: string[] = [];
 
-    // 1. Summary Block
-    parts.push(`> [!summary] 摘要`);
-    parts.push(`> ${parsed.summary.replace(/\\n/g, "\\n> ")}`);
-    parts.push(``);
-
-    // 2. Keywords Glossary
-    if (parsed.keywords && Array.isArray(parsed.keywords) && parsed.keywords.length > 0) {
+    // 1. Keywords Glossary
+    if (parsedPhase1.keywords && Array.isArray(parsedPhase1.keywords) && parsedPhase1.keywords.length > 0) {
       parts.push(`> [!info] 關鍵詞彙對照表（Keywords 英文至繁體中文）`);
-      for (const kw of parsed.keywords) {
+      for (const kw of parsedPhase1.keywords) {
         parts.push(`> - **${kw.en}**: ${kw.zh}`);
       }
       parts.push(``);
     }
 
-    // 3. Highlights
+    // 2. Highlights — first element is the 1-2 sentence summary, rest are bullet points
     parts.push(`## 重點提取`);
-    if (parsed.highlights.length > 0) {
-      for (const hl of parsed.highlights) {
-        parts.push(`${hl}`);
+    if (parsedPhase1.highlights && parsedPhase1.highlights.length > 0) {
+      // First element: summary sentence(s), rendered as a plain paragraph
+      parts.push(parsedPhase1.highlights[0]);
+      parts.push(``);
+
+      // Remaining elements: key points rendered as a bullet list
+      const bullets = parsedPhase1.highlights.slice(1);
+      if (bullets.length > 0) {
+        for (const hl of bullets) {
+          // Strip any leading bullet character the LLM may have added, then re-add
+          const cleaned = hl.replace(/^[-*]\s+/, "").trim();
+          if (cleaned) {
+            parts.push(`- ${cleaned}`);
+          }
+        }
         parts.push(``);
       }
     } else {
@@ -354,21 +492,62 @@ export class NoteRefinerEngine {
       parts.push(``);
     }
 
-    // 4. Atomic Links
-    if (atomicLinks.length > 0) {
-      parts.push(`## 原子化概念筆記`);
-      for (const link of atomicLinks) {
-        parts.push(`- ${link}`);
+    // 3. Original Quotes Section (bridge between highlights and reflection)
+    parts.push(originalQuotesContent.trim());
+    parts.push(``);
+
+    // 4. Reflection Section
+    parts.push(`## 反思 (Reflection)`);
+    parts.push(``);
+    if (questions && questions.length > 0) {
+      parts.push(`**催化問題：**`);
+      for (const q of questions) {
+        parts.push(`- ${q}`);
       }
       parts.push(``);
     }
 
-    // 5. Related Links
-    if (relatedLinks && relatedLinks.length > 0) {
-      parts.push(`## 相關筆記`);
-      for (const link of relatedLinks) {
-        parts.push(`- [[${link}]]`);
+    parts.push(`**我的簡短回答：**`);
+    parts.push(userAnswer ? userAnswer.trim() : `（跳過回答）`);
+    parts.push(``);
+
+    // English reflection placeholder (AI cannot ghostwrite, waiting for user to fill)
+    parts.push(`**English (2-3 sentences, AI cannot ghostwrite, waiting for you to fill):**`);
+    parts.push(``);
+    parts.push(``);
+
+    // Chinese reflection
+    parts.push(`**中文完整反思：**`);
+    if (parsedPhase2 && parsedPhase2.chineseReflection) {
+      parts.push(parsedPhase2.chineseReflection.trim());
+    } else {
+      parts.push(`*（無中文反思生成）*`);
+    }
+    parts.push(``);
+
+    // 5. If passed, add Atomic Links and Related Links
+    if (parsedPhase2 && parsedPhase2.passed) {
+      if (atomicLinks.length > 0) {
+        parts.push(`## 原子化概念筆記`);
+        for (const link of atomicLinks) {
+          parts.push(`- ${link}`);
+        }
+        parts.push(``);
       }
+
+      if (parsedPhase2.relatedLinks && parsedPhase2.relatedLinks.length > 0) {
+        parts.push(`## 相關筆記`);
+        for (const link of parsedPhase2.relatedLinks) {
+          if (link.noteName) {
+            parts.push(`- [[${link.noteName}]] ${link.reason ? `(原因：${link.reason})` : ""}`);
+          }
+        }
+        parts.push(``);
+      }
+    } else if (parsedPhase2 && parsedPhase2.lightweightLabel) {
+      // If failed, add lightweight label
+      parts.push(`## 輕量標籤`);
+      parts.push(`> ${parsedPhase2.lightweightLabel}`);
       parts.push(``);
     }
 
@@ -703,5 +882,86 @@ ${data.content}
       return true;
     }
     return false;
+  }
+
+  private isQuotesEmptyOrPlaceholder(quotesContent: string): boolean {
+    if (!quotesContent || quotesContent.trim() === "") {
+      return true;
+    }
+    const cleaned = quotesContent.replace(/<!--[\s\S]*?-->/g, "").trim();
+    const lines = cleaned.split("\n");
+    let hasActualQuote = false;
+    for (const line of lines) {
+      if (line.startsWith(">")) {
+        const quoteText = line.substring(1).replace(/["'\[\]\s]/g, "");
+        if (quoteText.length > 0 && 
+            !quoteText.includes("英文原句") && 
+            !quoteText.includes("逐字摘錄")) {
+          hasActualQuote = true;
+          break;
+        }
+      }
+    }
+    return !hasActualQuote;
+  }
+
+  private formatOriginalQuotes(quotes: { quote: string; source: string }[]): string {
+    const parts: string[] = [
+      `## 原文關鍵句摘錄 (Original Quotes)`,
+      ""
+    ];
+    for (const q of quotes) {
+      if (q.quote && q.quote.trim()) {
+        parts.push(`> "${q.quote.trim()}"`);
+        parts.push(`> — ${q.source ? q.source.trim() : ""}`);
+        parts.push("");
+      }
+    }
+    parts.push(`<!--
+【規則】
+- 禁止改寫、簡化、翻譯此區塊句子——必須是原文逐字複製。
+- 挑選標準：句子本身要有獨立完整的意義（不能是「it changed everything」這種需要前後文才懂的句子）。
+- 優先挑選有節奏感、修辭手法（對仗、重複、反轉）的句子。
+- 每句後面不附中文翻譯。
+- 字數上限：每句不超過40字。
+-->`);
+    return parts.join("\n");
+  }
+
+  private checkReflectionFilled(reflectionContent: string): { englishFilled: boolean; chineseFilled: boolean; englishSentencesCount: number } {
+    const englishRegex = /\*\*English \(2-3 sentences, imperfect is fine\):\*\*\s*([\s\S]*?)(?=\*\*中文完整反思：\*\*|$)/i;
+    const chineseRegex = /\*\*中文完整反思：\*\*\s*([\s\S]*?)(?=\n##|<!--|\%\%|$)/i;
+
+    const englishMatch = reflectionContent.match(englishRegex);
+    const chineseMatch = reflectionContent.match(chineseRegex);
+
+    let englishText = englishMatch ? englishMatch[1] : "";
+    let chineseText = chineseMatch ? chineseMatch[1] : "";
+
+    // Strip HTML comments, placeholder text, and whitespace
+    englishText = englishText.replace(/<!--[\s\S]*?-->/g, "").trim();
+    chineseText = chineseText.replace(/<!--[\s\S]*?-->/g, "").trim();
+
+    englishText = englishText.replace(/\[使用者手動輸入.*?\]/g, "").trim();
+    chineseText = chineseText.replace(/\[使用者手動輸入.*?\]/g, "").trim();
+
+    const englishFilled = englishText.length > 0;
+    const chineseFilled = chineseText.length > 0;
+
+    // Count English sentences roughly
+    const sentences = englishText.split(/[.!?]+(?:\s+|$)/).filter(s => s.trim().length > 0);
+    const englishSentencesCount = sentences.length;
+
+    return { englishFilled, chineseFilled, englishSentencesCount };
+  }
+
+  private captureSection(content: string, heading: string): string {
+    const escapedHeading = heading.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex = new RegExp(`## ${escapedHeading}\\n([\\s\\S]*?)(?=\\n## |$)`);
+    const match = content.match(regex);
+    if (match) {
+      return `## ${heading}\n${match[1].trim()}\n`;
+    }
+    return "";
   }
 }

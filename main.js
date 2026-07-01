@@ -425,21 +425,6 @@ var import_obsidian7 = require("obsidian");
 
 // src/viewpointCatalyst.ts
 var import_obsidian4 = require("obsidian");
-var CATALYST_QUESTION_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u8607\u683C\u62C9\u5E95\u5F0F\u7684\u601D\u7DAD\u50AC\u5316\u5E2B\u3002\u4F60\u7684\u8077\u8CAC\u662F\u8B93\u4F7F\u7528\u8005\u5C0D\u525B\u8B80\u5B8C\u7684\u5167\u5BB9\u9032\u884C\u6DF1\u5EA6\u7684\u6279\u5224\u6027\u601D\u8003\u3002
-
-\u4F60\u6703\u6536\u5230\u4E00\u7BC7\u5DF2\u7CBE\u4FEE\u7B46\u8A18\u7684\u6458\u8981\u8207\u91CD\u9EDE\u63D0\u53D6\u3002\u8ACB\u6839\u64DA\u5167\u5BB9\u751F\u6210\u6070\u597D 3 \u500B\u5177\u6311\u6230\u6027\u7684\u958B\u653E\u5F0F\u554F\u984C\u3002
-
-\u56B4\u683C\u898F\u5247\uFF1A
-1. \u56B4\u7981\u7522\u51FA\u4EFB\u4F55\u5167\u5BB9\u6458\u8981\u6027\u8CEA\u7684\u554F\u984C\uFF08\u4F8B\u5982\u300C\u9019\u7BC7\u6587\u7AE0\u7684\u4E3B\u8981\u89C0\u9EDE\u662F\u4EC0\u9EBC\uFF1F\u300D\uFF09\u3002
-2. \u6BCF\u500B\u554F\u984C\u5FC5\u9808\u8FEB\u4F7F\u4F7F\u7528\u8005\u8868\u614B\u3001\u6311\u6230\u9810\u8A2D\u7ACB\u5834\u6216\u9023\u7D50\u5230\u500B\u4EBA\u7D93\u9A57\u3002
-3. \u554F\u984C\u61C9\u8A72\u5F15\u5C0E\u51FA\u300C\u6211\u4E0D\u540C\u610F\u2026\u56E0\u70BA\u2026\u300D\u6216\u300C\u9019\u8B93\u6211\u60F3\u5230\u2026\u4F46\u5BE6\u969B\u4E0A\u2026\u300D\u7684\u56DE\u7B54\u3002
-4. \u4F7F\u7528\u7E41\u9AD4\u4E2D\u6587\u3002
-5. \u53EA\u8F38\u51FA 3 \u500B\u554F\u984C\uFF08numbered list\uFF09\uFF0C\u4E0D\u8981\u5176\u4ED6\u6587\u5B57\u3002
-
-\u554F\u984C\u985E\u578B\u7BC4\u4F8B\uFF08\u4E0D\u8981\u7167\u6284\uFF0C\u53EA\u662F\u555F\u767C\u65B9\u5411\uFF09\uFF1A
-- \u7ACB\u5834\u6311\u6230\uFF1A\u300C\u4F60\u540C\u610F\u4F5C\u8005\u7684\u8AD6\u9EDE\u55CE\uFF1F\u5982\u679C\u4F60\u662F\u53CD\u65B9\uFF0C\u4F60\u6703\u5982\u4F55\u53CD\u99C1\uFF1F\u300D
-- \u500B\u4EBA\u9023\u7D50\uFF1A\u300C\u9019\u500B\u89C0\u9EDE\u8207\u4F60\u904E\u53BB\u7684\u7D93\u9A57\u6709\u4EC0\u9EBC\u885D\u7A81\uFF1F\u300D
-- \u76F2\u9EDE\u5075\u6E2C\uFF1A\u300C\u4F5C\u8005\u53EF\u80FD\u5FFD\u7565\u4E86\u4EC0\u9EBC\u95DC\u9375\u5047\u8A2D\uFF1F\u300D`;
 var ReflectionModal = class extends import_obsidian4.Modal {
   constructor(app, noteTitle, questions, onSubmit) {
     super(app);
@@ -461,20 +446,21 @@ var ReflectionModal = class extends import_obsidian4.Modal {
     questionsDiv.style.borderRadius = "8px";
     questionsDiv.style.marginBottom = "16px";
     questionsDiv.style.borderLeft = "4px solid var(--interactive-accent)";
-    const lines = this.questions.split("\n").filter((l) => l.trim());
-    for (const line of lines) {
-      questionsDiv.createEl("p", {
-        text: line,
-        cls: "catalyst-question-item"
-      });
+    for (const q of this.questions) {
+      if (q && q.trim()) {
+        questionsDiv.createEl("p", {
+          text: q.trim(),
+          cls: "catalyst-question-item"
+        });
+      }
     }
-    new import_obsidian4.Setting(contentEl).setName("\u4F60\u7684\u53CD\u601D").setDesc("\u5BEB\u4E0B\u4F60\u7684\u6279\u5224\u3001\u7ACB\u5834\u6311\u6230\u6216\u76F4\u89BA\u60F3\u6CD5\u3002\u56B4\u7981\u7D14\u5167\u5BB9\u6458\u8981\u3002").addTextArea((text) => {
+    new import_obsidian4.Setting(contentEl).setName("\u4F60\u7684\u53CD\u601D").setDesc("\u5BEB\u4E0B\u4F60\u7684\u7C21\u77ED\u56DE\u7B54\u3002\u5141\u8A31\u56DE\u7B54\u4E0D\u5B8C\u6574\u3001\u4F7F\u7528\u788E\u53E5\u6216\u534A\u53E5\u3002").addTextArea((text) => {
       text.inputEl.style.width = "100%";
       text.inputEl.style.minHeight = "120px";
       text.inputEl.setAttr("rows", 6);
       text.inputEl.setAttr(
         "placeholder",
-        "\u4F8B\u5982\uFF1A\u6211\u4E0D\u540C\u610F\u4F5C\u8005\u8A8D\u70BA...\u7684\u89C0\u9EDE\uFF0C\u56E0\u70BA\u5728\u6211\u7684\u7D93\u9A57\u4E2D..."
+        "\u5BEB\u4E0B\u4F60\u7684\u7C21\u77ED\u56DE\u7B54\uFF08\u53EF\u4F7F\u7528\u4E0D\u5B8C\u6574\u53E5\u5B50\u3001\u788E\u53E5\u3001\u534A\u53E5\uFF09..."
       );
       text.onChange((value) => {
         this.userInput = value;
@@ -497,10 +483,6 @@ var ReflectionModal = class extends import_obsidian4.Modal {
       cls: "mod-cta"
     });
     submitBtn.addEventListener("click", () => {
-      if (this.userInput.trim().length < 10) {
-        new import_obsidian4.Notice("\u53CD\u601D\u5167\u5BB9\u592A\u77ED\u4E86\uFF01\u8ACB\u81F3\u5C11\u5BEB 10 \u500B\u5B57\u3002");
-        return;
-      }
       this.close();
       this.onSubmit(this.userInput.trim());
     });
@@ -517,70 +499,27 @@ var ViewpointCatalyst = class {
     this.temperature = temperature;
   }
   /**
-   * Check if the note needs viewpoint challenge, and if so, prompt the user.
-   *
-   * @param file The refined note file.
-   * @returns Promise that resolves when the catalyst flow completes.
+   * Show modal to prompt user for catalyst question responses.
+   * 
+   * @param noteTitle The note title.
+   * @param questions The pre-generated questions list.
+   * @returns The user's input string, or null if skipped.
    */
-  async challenge(file) {
-    try {
-      const isExternal = await this.isExternalSource(file);
-      if (!isExternal) {
-        console.log(
-          `[ViewpointCatalyst] ${file.basename} is not external source, skipping.`
-        );
-        return;
-      }
-      const content = await this.app.vault.read(file);
-      if (this.hasReflection(content)) {
-        console.log(
-          `[ViewpointCatalyst] ${file.basename} already has reflection, skipping.`
-        );
-        return;
-      }
-      const bodyContent = this.stripFrontmatter(content);
-      const truncatedBody = bodyContent.substring(0, 2e3);
-      new import_obsidian4.Notice("\u{1F9E0} \u6B63\u5728\u751F\u6210\u89C0\u9EDE\u50AC\u5316\u554F\u984C...");
-      const questions = await this.apiClient.prompt(
-        CATALYST_QUESTION_PROMPT,
-        `\u4EE5\u4E0B\u662F\u525B\u7CBE\u4FEE\u5B8C\u6210\u7684\u7B46\u8A18\u300C${file.basename}\u300D\u7684\u5167\u5BB9\uFF1A
-
-${truncatedBody}`,
-        this.temperature
+  async promptUser(noteTitle, questions) {
+    return new Promise((resolve) => {
+      const modal = new ReflectionModal(
+        this.app,
+        noteTitle,
+        questions,
+        (reflection) => {
+          resolve(reflection);
+        }
       );
-      return new Promise((resolve) => {
-        const modal = new ReflectionModal(
-          this.app,
-          file.basename,
-          questions,
-          async (reflection) => {
-            if (reflection) {
-              await this.injectReflection(file, reflection, questions);
-              new import_obsidian4.Notice("\u2705 \u500B\u4EBA\u53CD\u601D\u5DF2\u6CE8\u5165\u7B46\u8A18\uFF01");
-            } else {
-              await this.app.fileManager.processFrontMatter(
-                file,
-                (frontmatter) => {
-                  frontmatter["reflection_skipped"] = true;
-                }
-              );
-              new import_obsidian4.Notice("\u5DF2\u8DF3\u904E\u53CD\u601D\u3002\u53EF\u4EE5\u96A8\u6642\u56DE\u4F86\u88DC\u5145\u3002");
-            }
-            resolve();
-          }
-        );
-        modal.open();
-      });
-    } catch (err) {
-      console.error("[ViewpointCatalyst] Error:", err);
-      new import_obsidian4.Notice(`\u89C0\u9EDE\u50AC\u5316\u5668\u932F\u8AA4\uFF1A${err.message}`);
-    }
+      modal.open();
+    });
   }
   /**
-   * Determine if a note is from an external source.
-   * Checks frontmatter for type: reference, or source URL presence.
-   * Reads frontmatter directly from vault content as fallback when
-   * metadataCache hasn't synced yet (e.g., right after a rename).
+   * Helper method to determine if a note is from an external source.
    */
   async isExternalSource(file) {
     var _a;
@@ -589,58 +528,23 @@ ${truncatedBody}`,
     if (fm) {
       if (fm.type === "reference") return true;
       if (fm.source && typeof fm.source === "string" && fm.source.startsWith("http")) return true;
-      if (fm.has_reflection === true) return false;
     }
     const parentPath = ((_a = file.parent) == null ? void 0 : _a.path) || "";
     if (parentPath === "00_Inbox" || parentPath === "00_\u6536\u4EF6\u7BB1" || parentPath.startsWith("Clippings")) {
       return true;
     }
-    if (!fm) {
-      try {
-        const rawContent = await this.app.vault.read(file);
-        const fmMatch = rawContent.match(/^---\s*\n([\s\S]*?)\n---/);
-        if (fmMatch) {
-          const fmBlock = fmMatch[1];
-          if (/^type:\s*reference/m.test(fmBlock)) return true;
-          const sourceMatch = fmBlock.match(/^source:\s*(.+)/m);
-          if (sourceMatch && sourceMatch[1].trim().startsWith("http")) return true;
-        }
-      } catch (e) {
+    try {
+      const rawContent = await this.app.vault.read(file);
+      const fmMatch = rawContent.match(/^---\s*\n([\s\S]*?)\n---/);
+      if (fmMatch) {
+        const fmBlock = fmMatch[1];
+        if (/^type:\s*reference/m.test(fmBlock)) return true;
+        const sourceMatch = fmBlock.match(/^source:\s*(.+)/m);
+        if (sourceMatch && sourceMatch[1].trim().startsWith("http")) return true;
       }
+    } catch (e) {
     }
     return false;
-  }
-  /**
-   * Check if the note already contains a reflection section.
-   */
-  hasReflection(content) {
-    return content.includes("> [!reflection]") || content.includes("## \u500B\u4EBA\u53CD\u601D") || content.includes("## Personal Reflection");
-  }
-  /**
-   * Inject the user's reflection into the end of the note as a callout.
-   */
-  async injectReflection(file, reflection, questions) {
-    const content = await this.app.vault.read(file);
-    const timestamp = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const reflectionBlock = [
-      "",
-      `> [!reflection] \u500B\u4EBA\u53CD\u601D (${timestamp})`,
-      `> **\u50AC\u5316\u554F\u984C\uFF1A**`,
-      ...questions.split("\n").filter((l) => l.trim()).map((l) => `> ${l}`),
-      `>`,
-      `> **\u6211\u7684\u601D\u8003\uFF1A**`,
-      ...reflection.split("\n").map((l) => `> ${l}`),
-      ""
-    ].join("\n");
-    await this.app.vault.modify(file, content + reflectionBlock);
-    await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-      frontmatter["has_reflection"] = true;
-      delete frontmatter["reflection_skipped"];
-    });
-  }
-  stripFrontmatter(content) {
-    const fmRegex = /^---\s*\n[\s\S]*?\n---\s*\n?/;
-    return content.replace(fmRegex, "").trim();
   }
 };
 
@@ -1131,10 +1035,12 @@ var REFINER_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u5C08\u696D\u7684\u77E5\u8
 \u4F60\u5FC5\u9808\u8F38\u51FA\u6070\u597D\u4E00\u500B\u7D50\u69CB\u5316\u7684 JSON\uFF08JSON \u8CC7\u6599\u683C\u5F0F\uFF09\u7269\u4EF6\u3002\u8ACB\u4ED4\u7D30\u95B1\u8B80\u8F38\u5165\u7684\u7B46\u8A18\uFF08\u5305\u542B\u6A94\u540D\u4F5C\u70BA\u53C3\u8003\uFF09\uFF0C\u4E26\u57F7\u884C\u4EE5\u4E0B\u516D\u500B\u64CD\u4F5C\uFF1A
 
 1. \u6A19\u984C\u512A\u5316\uFF08TITLE\uFF09\uFF1A\u8A55\u4F30\u539F\u59CB\u6A19\u984C\u662F\u5426\u8207\u5167\u5BB9\u9AD8\u5EA6\u76F8\u95DC\u3002\u5982\u679C\u7121\u95DC\u6216\u662F\u7121\u610F\u7FA9\u540D\u7A31\uFF0C\u8ACB\u6839\u64DA\u5167\u5BB9\u7D66\u51FA\u4E00\u500B20\u5B57\u4EE5\u5167\u7684\u65B0\u7E41\u9AD4\u4E2D\u6587\u6A19\u984C\u3002\u5982\u679C\u539F\u59CB\u6A19\u984C\u5305\u542B\u65E5\u671F\u8CC7\u8A0A\uFF08\u5982 2026-04-17\uFF09\uFF0C\u5FC5\u9808\u4FDD\u7559\u65BC\u65B0\u6A19\u984C\u4E2D\u3002\u82E5\u539F\u6A19\u984C\u5DF2\u7D93\u8CBC\u5207\u8CBC\u65BC\u5167\u5BB9\uFF0C\u8ACB\u76F4\u63A5\u56DE\u50B3\u539F\u6A19\u984C\u3002
-2. \u6458\u8981\uFF08SUMMARY\uFF09\uFF1A\u63D0\u4F9B\u5C0D\u6838\u5FC3\u6982\u5FF5\u7684\u7C21\u6F54\u6458\u8981\u3002
+2. \u539F\u6587\u95DC\u9375\u53E5\u6458\u9304\uFF08ORIGINAL_QUOTES\uFF09\uFF1A\u5F9E\u539F\u59CB\u82F1\u6587\u6587\u672C\u4E2D\u6311\u9078\u4E26\u300C\u9010\u5B57\u6458\u9304\u300D3 \u81F3 5 \u53E5\u6700\u6838\u5FC3\u3001\u6700\u6709\u7BC0\u594F\u611F\u4E14\u7368\u7ACB\u6210\u7ACB\u7684\u82F1\u6587\u95DC\u9375\u53E5\u3002
 3. \u95DC\u9375\u8A5E\u5F59\uFF08KEYWORDS\uFF09\uFF1A\u63D0\u53D6\u6280\u8853\u7528\u8A9E\uFF08technical terms\uFF09\uFF0C\u4E26\u63D0\u4F9B\u82F1\u6587\u81F3\u7E41\u9AD4\u4E2D\u6587\u7684\u8A5E\u5F59\u5C0D\u7167\u8868\u3002\u5982\u679C\u539F\u59CB\u6587\u672C\u5DF2\u70BA\u4E2D\u6587\uFF0C\u53EF\u7565\u904E\u6B64\u6B65\u6216\u63D0\u4F9B\u4E2D\u6587\u6982\u5FF5\u7684\u82F1\u6587\u8B6F\u8A5E\u3002
-4. \u91CD\u9EDE\u63D0\u53D6\uFF08HIGHLIGHTS\uFF09\uFF1A\u8B39\u6311\u9078\u9AD8\u50F9\u503C\u3001\u6709\u5BE6\u7528\u6027\u7684\u6BB5\u843D\u6216\u53E5\u5B50\u3002\u91CD\u65B0\u6E05\u6670\u5730\u6539\u5BEB\uFF0C\u53BB\u9664\u6240\u6709\u6A23\u677F\u6587\u672C\u3001\u5197\u9918\u5167\u5BB9\u548C\u4E0D\u5FC5\u8981\u7684\u80CC\u666F\u8AAA\u660E\u3002
-5. \u539F\u5B50\u5316\u6982\u5FF5\uFF08ATOMIZATION\uFF09\uFF1A\u5982\u679C\u6587\u7AE0\u4E2D\u5305\u542B\u4E0D\u540C\u7684\u3001\u9AD8\u50F9\u503C\u7684\u6280\u5DE7\u3001\u6982\u5FF5\u6216\u601D\u7DAD\u6A21\u578B\uFF08\u4F8B\u5982\uFF1A\u7279\u5B9A\u7684\u300C\u57F7\u884C\u7DD2\u7BA1\u7406\uFF08Thread Management\uFF09\u300D\u6280\u5DE7\uFF09\uFF0C\u8ACB\u5C07\u5176\u8403\u53D6\u70BA\u7368\u7ACB\u7684\u539F\u5B50\u5316\u7B46\u8A18\u3002
+4. \u91CD\u9EDE\u63D0\u53D6\uFF08HIGHLIGHTS\uFF09\uFF1A\u5408\u4F75\u6458\u8981\u8DDF\u91CD\u9EDE\u63D0\u53D6\uFF0C\u5BEB\u6210\u4E00\u500B\u91CD\u9EDE\u63D0\u53D6\u3002\u5FC5\u9808\u5728 "highlights" \u9663\u5217\u7684\u7B2C\u4E00\u500B\u5143\u7D20\u653E\u5165\u5C0D\u6838\u5FC3\u6982\u5FF5\u7684\u7C21\u6F54\u7E3D\u7D50\uFF08\u6458\u8981\uFF0C\u7D04\u4E00\u81F3\u4E8C\u53E5\u8A71\uFF09\uFF0C\u96A8\u5F8C\u5143\u7D20\u70BA\u8B39\u6311\u9078\u9AD8\u50F9\u503C\u3001\u6709\u5BE6\u7528\u6027\u7684\u6BB5\u843D\u6216\u53E5\u5B50\uFF08\u91CD\u65B0\u6E05\u6670\u5730\u6539\u5BEB\uFF0C\u53BB\u9664\u6240\u6709\u6A23\u677F\u6587\u672C\u3001\u5197\u9918\u5167\u5BB9 and \u4E0D\u5FC5\u8981\u7684\u80CC\u666F\u8AAA\u660E\uFF09\u3002
+5. \u50AC\u5316\u554F\u984C\uFF08CATALYST_QUESTIONS\uFF09\uFF1A\u751F\u6210 1 \u81F3 3 \u500B\u7DCA\u6263\u6587\u7AE0\u7BC4\u570D\u7684\u50AC\u5316\u601D\u8003\u554F\u984C\u3002
+   - \u984C\u76EE\u5FC5\u9808\u80FD\u53EA\u7528\u9019\u7BC7\u6587\u7AE0\u7684\u5167\u5BB9\u56DE\u7B54\uFF0C\u7D55\u5C0D\u4E0D\u80FD\u8981\u6C42\u4F7F\u7528\u8005\u52D5\u7528\u6587\u7AE0\u4EE5\u5916\u7684\u7522\u696D\u77E5\u8B58\u6216\u505A\u958B\u653E\u5F0F\u50F9\u503C\u5224\u65B7\uFF08\u4F8B\u5982\u300C\u6211\u5011\u662F\u5426\u6295\u5165\u904E\u591A\u8CC7\u6E90\u300D\u9019\u7A2E\u984C\u76EE\u8981\u6DD8\u6C70\uFF09\u3002
+   - \u984C\u76EE\u5F62\u5F0F\u512A\u5148\u7528\u300C\u5982\u679C\u61C9\u7528\u5728\u4F60\u7684\u60C5\u5883\u6703\u600E\u6A23\u300D\uFF0C\u800C\u4E0D\u662F\u300C\u4F60\u5C0D\u9019\u500B\u73FE\u8C61\u7684\u6574\u9AD4\u770B\u6CD5\u662F\u4EC0\u9EBC\u300D\u3002
 6. \u5206\u985E\uFF08CLASSIFICATION\uFF09\uFF1A\u5C07\u5167\u5BB9\u5206\u985E\u5230\u4E94\u5927\u652F\u67F1\uFF08Five Pillars\uFF09\u4E2D\u7684\u6070\u597D\u4E00\u500B\u3002
 
 \u4E94\u5927\u652F\u67F1\uFF1A
@@ -1144,23 +1050,23 @@ var REFINER_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u5C08\u696D\u7684\u77E5\u8
 - 40_\u81EA\u8A17\u7BA1\u5BE6\u9A57\u5BA4
 - 00_\u6536\u4EF6\u7BB1
 
-\u9810\u671F\u7684 JSON \u7D50\u69CB\uFF1A
+\u9810\u671F\u7684 JSON \u7D50\u69CB\uFF08\u6CE8\u610F originalQuotes \u653E\u5728\u6700\u524D\uFF0C\u8B93\u60A8\u5148\u9032\u884C\u6458\u9304\u518D\u505A\u5F8C\u7E8C\u7CBE\u4FEE\uFF09\uFF1A
 {
   "suggestedTitle": "\u65B0\u7684\u6216\u539F\u4F86\u7684\u6A19\u984C",
-  "summary": "\u7C21\u6F54\u6458\u8981...",
+  "originalQuotes": [
+    { "quote": "\u82F1\u6587\u539F\u53E5\uFF0C\u9010\u5B57\u8907\u88FD\uFF0C\u4E0D\u6539\u5BEB\u4E0D\u7FFB\u8B6F", "source": "\u51FA\u8655\u6BB5\u843D\u95DC\u9375\u5B57\u6216\u5C0F\u6A19\u984C" }
+  ],
   "keywords": [
     { "en": "English Term", "zh": "\u7E41\u9AD4\u4E2D\u6587\u7FFB\u8B6F" }
   ],
   "highlights": [
+    "\u5C0D\u6838\u5FC3\u6982\u5FF5\u7684\u4E00\u81F3\u4E8C\u53E5\u8A71\u7C21\u6F54\u7E3D\u7D50\uFF08\u6458\u8981\uFF09",
     "\u9AD8\u50F9\u503C\u6BB5\u843D 1...",
     "\u9AD8\u50F9\u503C\u6BB5\u843D 2..."
   ],
-  "atomicNotes": [
-    {
-      "title": "\u7279\u5B9A\u6982\u5FF5\u540D\u7A31",
-      "content": "\u5C0D\u8A72\u6982\u5FF5\u7684\u8A73\u7D30\u89E3\u91CB...",
-      "tags": ["#\u6A19\u7C641", "#\u6A19\u7C642"]
-    }
+  "catalystQuestions": [
+    "\u5982\u679C\u4F60\u73FE\u5728\u8A2D\u8A08\u4E00\u500B agent prompt\uFF0C\u975C\u614B\u524D\u7DB4\u8981\u653E\u54EA\u4E9B\u5167\u5BB9\uFF0C\u624D\u4E0D\u6703\u8B93\u5FEB\u53D6\u5931\u6548\uFF1F",
+    "\u4F60\u904E\u53BB\u5BEB\u904E\u7684 prompt \u88E1\uFF0C\u6709\u6C92\u6709\u53EF\u80FD\u9806\u5E8F\u554F\u984C\u800C\u89F8\u767C\u904E cache miss\uFF1F"
   ],
   "category": "20_\u5B78\u8853\u8207\u96FB\u8166\u79D1\u5B78",
   "tags": ["#\u6A19\u7C641", "#\u6A19\u7C642", "#\u6A19\u7C643"],
@@ -1170,11 +1076,64 @@ var REFINER_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u5C08\u696D\u7684\u77E5\u8
 \u898F\u5247\uFF1A
 1. "category" \u5FC5\u9808\u7CBE\u78BA\u7B26\u5408\u4E94\u5927\u652F\u67F1\u4E2D\u7684\u5176\u4E2D\u4E00\u500B\u3002
 2. "tags" \u61C9\u5305\u542B 3 \u81F3 5 \u500B\u5B50\u4E3B\u984C\u3002
-3. \u5728\u9078\u64C7\u91CD\u9EDE\u63D0\u53D6\u6642\u8981\u8A55\u9078\u8B39\u614E\u3002\u5982\u679C\u6574\u7BC7\u6587\u672C\u6BEB\u7121\u50F9\u503C\uFF0C"highlights" \u53EF\u4EE5\u70BA\u7A7A\u3002
-4. "atomicNotes" \u61C9\u53EA\u5305\u542B\u9AD8\u5EA6\u5177\u9AD4\u4E14\u53EF\u91CD\u8907\u4F7F\u7528\u7684\u6D1E\u898B\u3002\u5982\u7121\u4E0D\u540C\u7684\u6982\u5FF5\uFF0C\u4E0D\u5F37\u884C\u5EFA\u7ACB\u3002
-5. \u300C\u6458\u8981\u300D\u3001\u300C\u95DC\u9375\u8A5E\u5F59\u300D\uFF08\u4E2D\u6587\u90E8\u5206\uFF09\u3001\u300C\u91CD\u9EDE\u63D0\u53D6\u300D\u548C\u300C\u539F\u5B50\u5316\u7B46\u8A18.\u5167\u5BB9\u300D\u4E2D\u7684\u6240\u6709\u6587\u672C\u5FC5\u9808\u70BA\u7E41\u9AD4\u4E2D\u6587\uFF08zh-TW\uFF09\u3002
-7. \u70BA\u4E86\u589E\u52A0\u77E5\u8B58\u5EAB\u7684\u95DC\u806F\u6027\uFF0C\u8ACB\u53C3\u8003\u8F38\u5165\u4E2D\u63D0\u4F9B\u7684\u300C\u77E5\u8B58\u5EAB\u73FE\u6709\u6A19\u7C64\u300D\u5217\u8868\u3002\u5982\u679C\u5167\u5BB9\u8207\u73FE\u6709\u6A19\u7C64\u76F8\u95DC\uFF0C\u8ACB\u512A\u5148\u9078\u7528\u9019\u4E9B\u5DF2\u5B58\u5728\u7684\u6A19\u7C64\u3002\u82E5\u73FE\u6709\u6A19\u7C64\u7686\u4E0D\u9069\u7528\uFF0C\u65B9\u53EF\u6839\u64DA\u5167\u5BB9\u751F\u6210\u65B0\u7684\u6A19\u7C64\u3002\u6A19\u7C64\u683C\u5F0F\u9808\u4EE5\u300C#\u300D\u958B\u982D\u3002
-8. \u8ACB\u53C3\u8003\u8F38\u5165\u4E2D\u7684\u300C\u95DC\u806F\u7B46\u8A18\u5019\u9078\u6E05\u55AE\u300D\u3002\u82E5\u5728\u64B0\u5BEB\u300C\u6458\u8981\u300D\u3001\u300C\u91CD\u9EDE\u63D0\u53D6\u300D\u6216\u300C\u539F\u5B50\u5316\u6982\u5FF5\u300D\u5167\u5BB9\u6642\u63D0\u5230\u5019\u9078\u6E05\u55AE\u4E2D\u7684\u6982\u5FF5\u6216\u9801\u9762\uFF0C\u8ACB\u4F7F\u7528\u96D9\u5C64\u62EC\u865F '[[\u7B46\u8A18\u540D\u7A31]]'\uFF08\u4F8B\u5982 [[Docker]]\uFF09\u9032\u884C\u96D9\u5411\u9023\u7D50\uFF0C\u5EFA\u7ACB\u77E5\u8B58\u7DB2\u8DEF\u3002`;
+3. "originalQuotes" \u898F\u5247\uFF1A
+   - \u5FC5\u9808\u662F\u539F\u6587\u9010\u5B57\u8907\u88FD\uFF0C\u7981\u6B62\u6539\u5BEB\u3001\u7C21\u5316\u3001\u7FFB\u8B6F\u3002
+   - \u6311\u9078\u6A19\u6E96\uFF1A\u53E5\u5B50\u672C\u8EAB\u8981\u6709\u7368\u7ACB\u5B8C\u6574\u7684\u610F\u7FA9\uFF08\u4E0D\u80FD\u662F\u300Cit changed everything\u300D\u9019\u7A2E\u9700\u8981\u524D\u5F8C\u6587\u624D\u61C2\u7684\u53E5\u5B50\uFF09\u3002
+   - \u512A\u5148\u6311\u9078\u6709\u7BC0\u594F\u611F\u3001\u4FEE\u8FAD\u624B\u6CD5\uFF08\u5C0D\u4ED7\u3001\u91CD\u8907\u3001\u53CD\u8F49\uFF09\u7684\u53E5\u5B50\u3002
+   - \u5B57\u6578\u4E0A\u9650\uFF1A\u6BCF\u53E5\u4E0D\u8D85\u904E 40 \u5B57\uFF0C\u907F\u514D\u6458\u9304\u6574\u6BB5\u3002
+   - \u6BCF\u53E5\u5F8C\u9762\u4E0D\u9644\u4E2D\u6587\u7FFB\u8B6F\u3002
+   - \u5FC5\u9808\u6311\u9078 3 \u5230 5 \u53E5\u3002
+4. \u5728\u9078\u64C7\u91CD\u9EDE\u63D0\u53D6\u6642\u8981\u8A55\u9078\u8B39\u614E\u3002\u5982\u679C\u6574\u7BC7\u6587\u672C\u6BEB\u7121\u50F9\u503C\uFF0C\u7B2C\u4E00\u500B\u5143\u7D20\u653E\u6458\u8981\u5F8C\uFF0C\u5176\u9918 highlights \u53EF\u4EE5\u70BA\u7A7A\u3002
+5. "catalystQuestions" \u61C9\u70BA 1 \u5230 3 \u500B\u8207\u6587\u7AE0\u5167\u5BB9\u7DCA\u6263\u7684\u554F\u984C\uFF0C\u7528\u4EE5\u555F\u767C\u4F7F\u7528\u8005\u5C07\u5176\u61C9\u7528\u65BC\u81EA\u8EAB\u60C5\u5883\u3002
+6. \u300C\u95DC\u9375\u8A5E\u5F59\u300D\uFF08\u4E2D\u6587\u90E8\u5206\uFF09\u548C\u300C\u91CD\u9EDE\u63D0\u53D6\u300D\u4E2D\u7684\u6240\u6709\u6587\u672C\u5FC5\u9808\u70BA\u7E41\u9AD4\u4E2D\u6587\uFF08zh-TW\uFF09\u3002
+7. \u300C\u53CD\u601D\uFF08Reflection\uFF09\u300D\u5340\u584A\u70BA\u4F7F\u7528\u8005\u624B\u52D5\u7DAD\u8B77\u5340\uFF0C\u7CFB\u7D71\u50C5\u751F\u6210\u5340\u584A\u6A19\u984C\u8207\u683C\u5F0F\u9AA8\u67B6\uFF0C\u4E0D\u5F97\u586B\u5165\u4EFB\u4F55\u5167\u6587\uFF0C\u4EA6\u4E0D\u5F97\u5728 JSON \u4E2D\u8F38\u51FA\u300C\u53CD\u601D\u300D\u5340\u584A\u7684\u5167\u5BB9\uFF0C\u9055\u53CD\u6B64\u898F\u5247\u8996\u70BA\u683C\u5F0F\u932F\u8AA4\u3002
+8. \u70BA\u4E86\u589E\u52A0\u77E5\u8B58\u5EAB\u7684\u95DC\u806F\u6027\uFF0C\u8ACB\u53C3\u8003\u8F38\u5165\u4E2D\u63D0\u4F9B\u7684\u300C\u77E5\u8B58\u5EAB\u73FE\u6709\u6A19\u7C64\u300D\u5217\u8868\u3002\u5982\u679C\u5167\u5BB9\u8207\u73FE\u6709\u6A19\u7C64\u76F8\u95DC\uFF0C\u8ACB\u512A\u5148\u9078\u7528\u9019\u4E9B\u5DF2\u5B58\u5728\u7684\u6A19\u7C64\u3002\u82E5\u73FE\u6709\u6A19\u7C64\u7686\u4E0D\u9069\u7528\uFF0C\u65B9\u53EF\u6839\u64DA\u5167\u5BB9\u751F\u6210\u65B0\u7684\u6A19\u7C64\u3002\u6A19\u7C64\u683C\u5F0F\u9808\u4EE5\u300C#\u300D\u958B\u982D\u3002
+9. \u8ACB\u53C3\u8003\u8F38\u5165\u4E2D\u63D0\u4F9B\u7684\u300C\u95DC\u806F\u7B46\u8A18\u5019\u9078\u6E05\u55AE\u300D\u3002\u82E5\u5728\u64B0\u5BEB\u300C\u91CD\u9EDE\u63D0\u53D6\u300D\u5167\u5BB9\u6642\u63D0\u5230\u5019\u9078\u6E05\u55AE\u4E2D\u7684\u6982\u5FF5\u6216\u9801\u9762\uFF0C\u8ACB\u4F7F\u7528\u96D9\u5C64\u62EC\u865F '[[\u7B46\u8A18\u540D\u7A31]]'\uFF08\u4F8B\u5982 [[Docker]]\uFF09\u9032\u884C\u96D9\u5411\u9023\u7D50\uFF0C\u5EFA\u7ACB\u77E5\u8B58\u7DB2\u8DEF\u3002`;
+var EVALUATE_AND_REFLECT_SYSTEM_PROMPT = `\u4F60\u662F\u4E00\u4F4D\u5C08\u696D\u7684\u77E5\u8B58\u5206\u6790\u8207\u601D\u7DAD\u5224\u8B80\u5F15\u64CE\u3002
+\u4F60\u6703\u6536\u5230\uFF1A
+1. \u7B46\u8A18\u7684\u6458\u8981\u8207\u91CD\u9EDE\u63D0\u53D6\u3002
+2. \u50AC\u5316\u554F\u984C\uFF081-3\u984C\uFF09\u3002
+3. \u4F7F\u7528\u8005\u5C0D\u50AC\u5316\u554F\u984C\u7684\u7C21\u77ED\u56DE\u7B54\u3002
+
+\u8ACB\u57F7\u884C\u4EE5\u4E0B\u5224\u8B80\u8207\u751F\u6210\u4EFB\u52D9\uFF0C\u4E26\u8F38\u51FA\u6070\u597D\u4E00\u500B\u7D50\u69CB\u5316\u7684 JSON\uFF08JSON \u8CC7\u6599\u683C\u5F0F\uFF09\u7269\u4EF6\uFF1A
+
+1. \u5224\u8B80\u601D\u8003\u75D5\u8DE1\uFF08PASSED\uFF09\uFF1A
+   AI \u8B80\u4F7F\u7528\u8005\u5C0D\u50AC\u5316\u554F\u984C\u7684\u56DE\u7B54\uFF0C\u5224\u65B7\u601D\u8003\u75D5\u8DE1\u6DF1\u6DFA\u3002\u5224\u65B7\u4F9D\u64DA\u53EA\u770B\u8CEA\uFF0C\u4E0D\u770B\u91CF\uFF1A
+   - \u6709\u6C92\u6709\u51FA\u73FE\u300C\u6211\u89BA\u5F97\u300D\u300C\u61C9\u8A72\u662F\u300D\u300C\u4F46\u300D\u300C\u5982\u679C\u300D\u9019\u985E\u4EE3\u8868\u4F7F\u7528\u8005\u5728\u4E0B\u5224\u65B7\u3001\u800C\u975E\u55AE\u7D14\u8907\u8FF0\u7684\u8A9E\u8A00\u6A19\u8A18\u3002
+   - \u6709\u6C92\u6709\u5177\u9AD4connect\u5230\u4F7F\u7528\u8005\u81EA\u5DF1\u7684\u60C5\u5883\uFF0F\u904E\u53BB\u7D93\u9A57\uFF08\u54EA\u6015\u53EA\u6709\u4E00\u53E5\u8A71\uFF09\u3002
+   - \u5373\u4F7F\u53EA\u6709\u534A\u53E5\u3001\u5B57\u6578\u5F88\u5C11\uFF0C\u53EA\u8981\u65B9\u5411\u662F\u300C\u56DE\u61C9\u554F\u984C\u300D\u800C\u975E\u300C\u7559\u767D\uFF0F\u7121\u610F\u7FA9\u5167\u5BB9\uFF0F\u7D14\u8907\u88FD\u6587\u7AE0\u53E5\u5B50\u300D\uFF0C\u5C31\u7B97\u901A\u904E\uFF08passed \u8A2D\u70BA true\uFF09\u3002
+   - \u5982\u679C\u5B8C\u5168\u7A7A\u767D\u3001\u7D14\u8907\u88FD\u6587\u7AE0\u53E5\u5B50\u3001\u6216\u662F\u56DE\u7B54\u8207\u554F\u984C\u5B8C\u5168\u7121\u95DC\u7684\u80E1\u8A00\u4E82\u8A9E\uFF0C\u5247\u5224\u5B9A\u4E0D\u901A\u904E\uFF08passed \u8A2D\u70BA false\uFF09\u3002
+
+2. \u751F\u6210\u53CD\u601D\uFF08REFLECTION\uFF09\uFF1A
+   - chineseReflection\uFF08\u4E2D\u6587\u5B8C\u6574\u53CD\u601D\uFF09\uFF1A\u6839\u64DA\u4F7F\u7528\u8005\u5C0D\u50AC\u5316\u554F\u984C\u7684\u56DE\u7B54\uFF0C\u7D50\u5408\u6587\u7AE0\u5167\u5BB9\uFF0C\u70BA\u4F7F\u7528\u8005\u751F\u6210\u4E00\u6BB5\u6DF1\u5EA6\u3001\u5B8C\u6574\u7684\u4E2D\u6587\u53CD\u601D\uFF08\u7D042-3\u53E5\uFF09\u3002
+
+3. \u81EA\u52D5\u6C7A\u5B9A\u62C6\u89E3\u6DF1\u5EA6\uFF1A
+   - \u82E5 passed \u70BA true\uFF08\u901A\u904E\uFF09\uFF1A
+     - atomicNotes\uFF08\u539F\u5B50\u5316\u6982\u5FF5\uFF09\uFF1A\u63D0\u53D6\u6587\u7AE0\u4E2D\u9AD8\u50F9\u503C\u7684\u7368\u7ACB\u6982\u5FF5\uFF0C\u4E26\u751F\u6210\u539F\u5B50\u7B46\u8A18\u3002
+       \u3010\u6975\u91CD\u8981\u898F\u5247\u3011\uFF1A\u4F60\u5FC5\u9808\u300C\u76F4\u63A5\u628A\u4F7F\u7528\u8005\u5C0D\u50AC\u5316\u554F\u984C\u7684\u56DE\u7B54\u300D\uFF0C\u4F5C\u70BA\u539F\u5B50\u7B46\u8A18\u7684\u958B\u5834\u5B9A\u7FA9\u53E5\uFF08\u7B2C\u4E00\u53E5\u8A71\uFF09\uFF0C\u7D55\u5C0D\u4E0D\u80FD\u91CD\u65B0\u7528\u6587\u7AE0\u7684\u8A71\u53BB\u5BEB\uFF01\u7136\u5F8C\u518D\u570D\u7E5E\u9019\u500B\u6982\u5FF5\u7D50\u5408\u6587\u7AE0\u5167\u5BB9\u9032\u884C\u88DC\u5145\u548C\u5C55\u958B\u3002
+     - relatedLinks\uFF08\u76F8\u95DC\u9023\u7D50\u8207\u539F\u56E0\uFF09\uFF1A\u5206\u6790\u4F7F\u7528\u8005\u77E5\u8B58\u5EAB\u4E2D\u53EF\u80FD\u95DC\u806F\u7684\u7B46\u8A18\uFF0C\u5217\u51FA\u76F8\u95DC\u9023\u7D50\u4E26\u9644\u4E0A\u5177\u9AD4\u7406\u7531\uFF08\u5305\u542B\u63A8\u85A6\u8A72\u95DC\u806F\u7684\u539F\u56E0\uFF09\u3002\u683C\u5F0F\u70BA\u9663\u5217\uFF0C\u5305\u542B { "noteName": "\u9023\u7D50\u540D\u7A31", "reason": "\u63A8\u85A6\u7406\u7531" }\u3002
+   - \u82E5 passed \u70BA false\uFF08\u6C92\u901A\u904E\uFF09\uFF1A
+     - atomicNotes \u5FC5\u9808\u70BA\u7A7A\u9663\u5217\u3002
+     - relatedLinks \u5FC5\u9808\u70BA\u7A7A\u9663\u5217\u3002
+     - lightweightLabel\uFF08\u8F15\u91CF\u6A19\u7C64\uFF09\uFF1A\u751F\u6210\u4E00\u53E5\u8A71\u7684\u8F15\u91CF\u6A19\u7C64\uFF0C\u4F8B\u5982\uFF1A\u5C0D\u6B64\u4E3B\u984C\u7684\u7C21\u77ED\u4E00\u53E5\u8A71\u5206\u985E\u6216\u6838\u5FC3\u5C6C\u6027\u63CF\u8FF0\uFF08\u7E41\u9AD4\u4E2D\u6587\uFF0C\u7D0410-20\u5B57\uFF09\uFF0C\u4F5C\u70BA\u6C92\u901A\u904E\u6642\u7684\u8F15\u91CF\u8A18\u9304\u3002
+
+\u9810\u671F\u7684 JSON \u7D50\u69CB\uFF1A
+{
+  "passed": true,
+  "chineseReflection": "\u57FA\u65BC\u60A8\u7684\u56DE\u7B54\u8207\u6587\u7AE0\u5167\u5BB9\uFF0C...",
+  "atomicNotes": [
+    {
+      "title": "\u6982\u5FF5\u540D\u7A31",
+      "content": "\u4F7F\u7528\u8005\u7684\u56DE\u7B54\uFF08\u4F5C\u70BA\u7B2C\u4E00\u53E5\uFF09\u3002\u63A5\u8457\u662F\u57FA\u65BC\u6587\u7AE0\u5167\u5BB9\u5C0D\u8A72\u6982\u5FF5\u7684\u8A73\u7D30\u89E3\u91CB\u3001\u7528\u9014\u3001\u61C9\u7528\u5834\u666F\u7B49...",
+      "tags": ["#\u6A19\u7C641", "#\u6A19\u7C642"]
+    }
+  ],
+  "relatedLinks": [
+    { "noteName": "\u76F8\u95DC\u7B46\u8A18\u540D\u7A31", "reason": "\u56E0\u70BA\u60A8\u5728\u56DE\u7B54\u4E2D\u63D0\u5230..." }
+  ],
+  "lightweightLabel": ""
+}
+`;
 var NoteRefinerEngine = class {
   constructor(app, apiClient, temperature, secondSelfFolder = "04_Second_Self", identityFileName = "IDENTITY.md") {
     this.app = app;
@@ -1218,14 +1177,43 @@ ${bodyContent}${existingTagsContext}${relatedContext}`;
         this.temperature
       );
       const parsed = parseJsonFromLLM(rawResponse);
-      if (!parsed || !parsed.summary || !Array.isArray(parsed.highlights)) {
+      if (!parsed || !Array.isArray(parsed.highlights) || parsed.highlights.length === 0) {
         new import_obsidian7.Notice("\u5927\u578B\u8A9E\u8A00\u6A21\u578B\uFF08LLM\uFF09\u56DE\u50B3\u7684 JSON \u7D50\u69CB\u975E\u9810\u671F\u3002\u8ACB\u6AA2\u67E5\u4E3B\u63A7\u53F0\u3002");
         console.error("[NoteRefinerEngine] Invalid response:", rawResponse);
         return;
       }
+      const questions = parsed.catalystQuestions && parsed.catalystQuestions.length > 0 ? parsed.catalystQuestions : ["\u5982\u679C\u4F60\u73FE\u5728\u5C07\u6B64\u6587\u7AE0\u61C9\u7528\u5728\u4F60\u7684\u60C5\u5883\uFF0C\u6703\u9047\u5230\u4EC0\u9EBC\u6311\u6230\uFF1F"];
+      const catalyst = new ViewpointCatalyst(
+        this.app,
+        this.apiClient,
+        this.temperature
+      );
+      const userAnswer = await catalyst.promptUser(file.basename, questions);
+      new import_obsidian7.Notice("\u{1F9E0} \u6B63\u5728\u5224\u8B80\u601D\u8003\u75D5\u8DE1\u4E26\u6C7A\u5B9A\u62C6\u89E3\u6DF1\u5EA6...");
+      const phase2UserPrompt = `\u3010\u7B46\u8A18\u6A19\u984C\u3011\uFF1A${file.basename}
+\u3010\u6458\u8981\u8207\u91CD\u9EDE\u63D0\u53D6\u3011\uFF1A
+${parsed.highlights.join("\n")}
+
+\u3010\u50AC\u5316\u554F\u984C\u3011\uFF1A
+${questions.map((q, idx) => `${idx + 1}. ${q}`).join("\n")}
+
+\u3010\u4F7F\u7528\u8005\u7684\u7C21\u77ED\u56DE\u7B54\u3011\uFF1A
+${userAnswer || "\uFF08\u4F7F\u7528\u8005\u8DF3\u904E\u4E86\u56DE\u7B54\uFF0C\u672A\u63D0\u4F9B\u601D\u8003\u75D5\u8DE1\uFF09"}`;
+      const rawPhase2Response = await this.apiClient.prompt(
+        EVALUATE_AND_REFLECT_SYSTEM_PROMPT,
+        phase2UserPrompt,
+        this.temperature
+      );
+      const parsedPhase2 = parseJsonFromLLM(rawPhase2Response) || {
+        passed: false,
+        chineseReflection: "",
+        atomicNotes: [],
+        relatedLinks: [],
+        lightweightLabel: "\u672A\u901A\u904E\u601D\u8003\u75D5\u8DE1\u5224\u8B80"
+      };
       const atomicLinks = [];
-      if (parsed.atomicNotes && Array.isArray(parsed.atomicNotes)) {
-        for (const atomic of parsed.atomicNotes) {
+      if (parsedPhase2 && parsedPhase2.passed && parsedPhase2.atomicNotes && Array.isArray(parsedPhase2.atomicNotes)) {
+        for (const atomic of parsedPhase2.atomicNotes) {
           const fileName = this.sanitizeFileName(atomic.title);
           const link = await this.createAtomicNote(fileName, atomic, parsed.category, file.basename);
           if (link) {
@@ -1233,16 +1221,40 @@ ${bodyContent}${existingTagsContext}${relatedContext}`;
           }
         }
       }
-      const llmLinks = this.extractWikilinks(rawResponse);
-      const postLlmRelated = this.findRelatedNotes(
-        file,
-        parsed.tags || [],
-        parsed.keywords || [],
-        parsed.suggestedTitle || file.basename,
-        llmLinks,
-        5
-      );
-      const refinedBody = this.buildRefinedContent(parsed, atomicLinks, postLlmRelated);
+      const originalQuotes = this.captureSection(originalContent, "\u539F\u6587\u95DC\u9375\u53E5\u6458\u9304 (Original Quotes)");
+      const defaultQuotes = `## \u539F\u6587\u95DC\u9375\u53E5\u6458\u9304 (Original Quotes)
+
+> "[\u82F1\u6587\u539F\u53E5\uFF0C\u9010\u5B57\u6458\u9304\uFF0C\u4E0D\u6539\u5BEB\u3001\u4E0D\u7FFB\u8B6F]"
+> \u2014 \u51FA\u8655\u6BB5\u843D\u95DC\u9375\u5B57\uFF08\u4F8B\u5982\uFF1AWhat a loop is actually made of\uFF09
+
+> ""
+> \u2014 
+
+> ""
+> \u2014 
+
+> ""
+> \u2014 
+
+<!--
+\u3010\u898F\u5247\u3011
+- \u7981\u6B62\u6539\u5BEB\u3001\u7C21\u5316\u3001\u7FFB\u8B6F\u6B64\u5340\u584A\u53E5\u5B50\u2014\u2014\u5FC5\u9808\u662F\u539F\u6587\u9010\u5B57\u8907\u88FD\u3002
+- \u6311\u9078\u6A19\u6E96\uFF1A\u53E5\u5B50\u672C\u8EAB\u8981\u6709\u7368\u7ACB\u5B8C\u6574\u7684\u610F\u7FA9\uFF08\u4E0D\u80FD\u662F\u300Cit changed everything\u300D\u9019\u7A2E\u9700\u8981\u524D\u5F8C\u6587\u624D\u61C2\u7684\u53E5\u5B50\uFF09\u3002
+- \u512A\u5148\u6311\u9078\u6709\u7BC0\u594F\u611F\u3001\u4FEE\u8FAD\u624B\u6CD5\uFF08\u5C0D\u4ED7\u3001\u91CD\u8907\u3001\u53CD\u8F49\uFF09\u7684\u53E5\u5B50\u3002
+- \u6BCF\u53E5\u5F8C\u9762\u4E0D\u9644\u4E2D\u6587\u7FFB\u8B6F\u3002
+- \u5B57\u6578\u4E0A\u9650\uFF1A\u6BCF\u53E5\u4E0D\u8D85\u904E40\u5B57\u3002
+-->`;
+      let finalQuotes = "";
+      if (this.isQuotesEmptyOrPlaceholder(originalQuotes)) {
+        if (parsed.originalQuotes && parsed.originalQuotes.length > 0) {
+          finalQuotes = this.formatOriginalQuotes(parsed.originalQuotes);
+        } else {
+          finalQuotes = defaultQuotes;
+        }
+      } else {
+        finalQuotes = originalQuotes;
+      }
+      const refinedBody = this.buildRefinedContent(parsed, parsedPhase2, atomicLinks, finalQuotes, questions, userAnswer);
       const ontologyRestoredBody = this.restoreOntology(refinedBody, ontology);
       let finalCategory = parsed.category;
       if (!PILLARS2.includes(finalCategory)) {
@@ -1279,6 +1291,12 @@ ${bodyContent}${existingTagsContext}${relatedContext}`;
         const allTags = [...existingTags, ...tagsToAdd, ...ontology.frontmatterTags];
         frontmatter["tags"] = Array.from(new Set(allTags));
         frontmatter["refined"] = true;
+        if (parsedPhase2) {
+          frontmatter["reflection_passed"] = parsedPhase2.passed;
+          if (parsedPhase2.lightweightLabel) {
+            frontmatter["lightweight_label"] = parsedPhase2.lightweightLabel;
+          }
+        }
       });
       const contentWithNewFrontmatter = await this.app.vault.read(file);
       const frontmatterMatch = contentWithNewFrontmatter.match(/^---\s*\n[\s\S]*?\n---\s*\n?/);
@@ -1305,16 +1323,6 @@ ${bodyContent}${existingTagsContext}${relatedContext}`;
       const movedCategory = shouldMove ? destinationFolder : parentDirAfterMove;
       const freshPath = (0, import_obsidian7.normalizePath)(`${movedCategory}/${finalName}.md`);
       const freshFile = (_d = this.app.vault.getAbstractFileByPath(freshPath)) != null ? _d : file;
-      try {
-        const catalyst = new ViewpointCatalyst(
-          this.app,
-          this.apiClient,
-          this.temperature
-        );
-        await catalyst.challenge(freshFile);
-      } catch (err) {
-        console.error("[NoteRefinerEngine] Viewpoint Catalyst error:", err);
-      }
       try {
         const radar = new ContradictionRadar(
           this.app,
@@ -1344,40 +1352,77 @@ ${bodyContent}${existingTagsContext}${relatedContext}`;
       new import_obsidian7.Notice(`\u7CBE\u4FEE\u5931\u6557\uFF1A${err.message}`);
     }
   }
-  buildRefinedContent(parsed, atomicLinks, relatedLinks) {
+  buildRefinedContent(parsedPhase1, parsedPhase2, atomicLinks, originalQuotesContent, questions, userAnswer) {
     const parts = [];
-    parts.push(`> [!summary] \u6458\u8981`);
-    parts.push(`> ${parsed.summary.replace(/\\n/g, "\\n> ")}`);
-    parts.push(``);
-    if (parsed.keywords && Array.isArray(parsed.keywords) && parsed.keywords.length > 0) {
+    if (parsedPhase1.keywords && Array.isArray(parsedPhase1.keywords) && parsedPhase1.keywords.length > 0) {
       parts.push(`> [!info] \u95DC\u9375\u8A5E\u5F59\u5C0D\u7167\u8868\uFF08Keywords \u82F1\u6587\u81F3\u7E41\u9AD4\u4E2D\u6587\uFF09`);
-      for (const kw of parsed.keywords) {
+      for (const kw of parsedPhase1.keywords) {
         parts.push(`> - **${kw.en}**: ${kw.zh}`);
       }
       parts.push(``);
     }
     parts.push(`## \u91CD\u9EDE\u63D0\u53D6`);
-    if (parsed.highlights.length > 0) {
-      for (const hl of parsed.highlights) {
-        parts.push(`${hl}`);
+    if (parsedPhase1.highlights && parsedPhase1.highlights.length > 0) {
+      parts.push(parsedPhase1.highlights[0]);
+      parts.push(``);
+      const bullets = parsedPhase1.highlights.slice(1);
+      if (bullets.length > 0) {
+        for (const hl of bullets) {
+          const cleaned = hl.replace(/^[-*]\s+/, "").trim();
+          if (cleaned) {
+            parts.push(`- ${cleaned}`);
+          }
+        }
         parts.push(``);
       }
     } else {
       parts.push(`*\uFF08\u672A\u767C\u73FE\u7279\u5B9A\u6709\u7528\u6BB5\u843D\uFF09*`);
       parts.push(``);
     }
-    if (atomicLinks.length > 0) {
-      parts.push(`## \u539F\u5B50\u5316\u6982\u5FF5\u7B46\u8A18`);
-      for (const link of atomicLinks) {
-        parts.push(`- ${link}`);
+    parts.push(originalQuotesContent.trim());
+    parts.push(``);
+    parts.push(`## \u53CD\u601D (Reflection)`);
+    parts.push(``);
+    if (questions && questions.length > 0) {
+      parts.push(`**\u50AC\u5316\u554F\u984C\uFF1A**`);
+      for (const q of questions) {
+        parts.push(`- ${q}`);
       }
       parts.push(``);
     }
-    if (relatedLinks && relatedLinks.length > 0) {
-      parts.push(`## \u76F8\u95DC\u7B46\u8A18`);
-      for (const link of relatedLinks) {
-        parts.push(`- [[${link}]]`);
+    parts.push(`**\u6211\u7684\u7C21\u77ED\u56DE\u7B54\uFF1A**`);
+    parts.push(userAnswer ? userAnswer.trim() : `\uFF08\u8DF3\u904E\u56DE\u7B54\uFF09`);
+    parts.push(``);
+    parts.push(`**English (2-3 sentences, AI cannot ghostwrite, waiting for you to fill):**`);
+    parts.push(``);
+    parts.push(``);
+    parts.push(`**\u4E2D\u6587\u5B8C\u6574\u53CD\u601D\uFF1A**`);
+    if (parsedPhase2 && parsedPhase2.chineseReflection) {
+      parts.push(parsedPhase2.chineseReflection.trim());
+    } else {
+      parts.push(`*\uFF08\u7121\u4E2D\u6587\u53CD\u601D\u751F\u6210\uFF09*`);
+    }
+    parts.push(``);
+    if (parsedPhase2 && parsedPhase2.passed) {
+      if (atomicLinks.length > 0) {
+        parts.push(`## \u539F\u5B50\u5316\u6982\u5FF5\u7B46\u8A18`);
+        for (const link of atomicLinks) {
+          parts.push(`- ${link}`);
+        }
+        parts.push(``);
       }
+      if (parsedPhase2.relatedLinks && parsedPhase2.relatedLinks.length > 0) {
+        parts.push(`## \u76F8\u95DC\u7B46\u8A18`);
+        for (const link of parsedPhase2.relatedLinks) {
+          if (link.noteName) {
+            parts.push(`- [[${link.noteName}]] ${link.reason ? `(\u539F\u56E0\uFF1A${link.reason})` : ""}`);
+          }
+        }
+        parts.push(``);
+      }
+    } else if (parsedPhase2 && parsedPhase2.lightweightLabel) {
+      parts.push(`## \u8F15\u91CF\u6A19\u7C64`);
+      parts.push(`> ${parsedPhase2.lightweightLabel}`);
       parts.push(``);
     }
     const timestamp = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
@@ -1637,6 +1682,74 @@ ${data.content}
       return true;
     }
     return false;
+  }
+  isQuotesEmptyOrPlaceholder(quotesContent) {
+    if (!quotesContent || quotesContent.trim() === "") {
+      return true;
+    }
+    const cleaned = quotesContent.replace(/<!--[\s\S]*?-->/g, "").trim();
+    const lines = cleaned.split("\n");
+    let hasActualQuote = false;
+    for (const line of lines) {
+      if (line.startsWith(">")) {
+        const quoteText = line.substring(1).replace(/["'\[\]\s]/g, "");
+        if (quoteText.length > 0 && !quoteText.includes("\u82F1\u6587\u539F\u53E5") && !quoteText.includes("\u9010\u5B57\u6458\u9304")) {
+          hasActualQuote = true;
+          break;
+        }
+      }
+    }
+    return !hasActualQuote;
+  }
+  formatOriginalQuotes(quotes) {
+    const parts = [
+      `## \u539F\u6587\u95DC\u9375\u53E5\u6458\u9304 (Original Quotes)`,
+      ""
+    ];
+    for (const q of quotes) {
+      if (q.quote && q.quote.trim()) {
+        parts.push(`> "${q.quote.trim()}"`);
+        parts.push(`> \u2014 ${q.source ? q.source.trim() : ""}`);
+        parts.push("");
+      }
+    }
+    parts.push(`<!--
+\u3010\u898F\u5247\u3011
+- \u7981\u6B62\u6539\u5BEB\u3001\u7C21\u5316\u3001\u7FFB\u8B6F\u6B64\u5340\u584A\u53E5\u5B50\u2014\u2014\u5FC5\u9808\u662F\u539F\u6587\u9010\u5B57\u8907\u88FD\u3002
+- \u6311\u9078\u6A19\u6E96\uFF1A\u53E5\u5B50\u672C\u8EAB\u8981\u6709\u7368\u7ACB\u5B8C\u6574\u7684\u610F\u7FA9\uFF08\u4E0D\u80FD\u662F\u300Cit changed everything\u300D\u9019\u7A2E\u9700\u8981\u524D\u5F8C\u6587\u624D\u61C2\u7684\u53E5\u5B50\uFF09\u3002
+- \u512A\u5148\u6311\u9078\u6709\u7BC0\u594F\u611F\u3001\u4FEE\u8FAD\u624B\u6CD5\uFF08\u5C0D\u4ED7\u3001\u91CD\u8907\u3001\u53CD\u8F49\uFF09\u7684\u53E5\u5B50\u3002
+- \u6BCF\u53E5\u5F8C\u9762\u4E0D\u9644\u4E2D\u6587\u7FFB\u8B6F\u3002
+- \u5B57\u6578\u4E0A\u9650\uFF1A\u6BCF\u53E5\u4E0D\u8D85\u904E40\u5B57\u3002
+-->`);
+    return parts.join("\n");
+  }
+  checkReflectionFilled(reflectionContent) {
+    const englishRegex = /\*\*English \(2-3 sentences, imperfect is fine\):\*\*\s*([\s\S]*?)(?=\*\*中文完整反思：\*\*|$)/i;
+    const chineseRegex = /\*\*中文完整反思：\*\*\s*([\s\S]*?)(?=\n##|<!--|\%\%|$)/i;
+    const englishMatch = reflectionContent.match(englishRegex);
+    const chineseMatch = reflectionContent.match(chineseRegex);
+    let englishText = englishMatch ? englishMatch[1] : "";
+    let chineseText = chineseMatch ? chineseMatch[1] : "";
+    englishText = englishText.replace(/<!--[\s\S]*?-->/g, "").trim();
+    chineseText = chineseText.replace(/<!--[\s\S]*?-->/g, "").trim();
+    englishText = englishText.replace(/\[使用者手動輸入.*?\]/g, "").trim();
+    chineseText = chineseText.replace(/\[使用者手動輸入.*?\]/g, "").trim();
+    const englishFilled = englishText.length > 0;
+    const chineseFilled = chineseText.length > 0;
+    const sentences = englishText.split(/[.!?]+(?:\s+|$)/).filter((s) => s.trim().length > 0);
+    const englishSentencesCount = sentences.length;
+    return { englishFilled, chineseFilled, englishSentencesCount };
+  }
+  captureSection(content, heading) {
+    const escapedHeading = heading.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+    const regex = new RegExp(`## ${escapedHeading}\\n([\\s\\S]*?)(?=\\n## |$)`);
+    const match = content.match(regex);
+    if (match) {
+      return `## ${heading}
+${match[1].trim()}
+`;
+    }
+    return "";
   }
 };
 
