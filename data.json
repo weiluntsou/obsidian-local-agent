@@ -1,6 +1,6 @@
 {
   "apiEndpoint": "http://127.0.0.1:8000",
-  "defaultModel": "gemma-4-E4B-Agentic-Opus-Reasoning-GeminiCLI-mlx-4bit",
+  "defaultModel": "gemma-4-12b-coder-fable5-composer2.5-8bit",
   "inputFolder": "Daily Notes",
   "outputFolder": "Insights",
   "maxFilesToProcess": 20,
@@ -11,5 +11,6 @@
   "cloudApiKey": "AIzaSyBTF9PL3G4e_cUK7IAE0ZEj2RuWALUq-8k",
   "cloudModel": "gemini-3.1-flash-lite",
   "secondSelfFolder": "04_Second_Self",
-  "identityFileName": "IDENTITY.md"
+  "identityFileName": "IDENTITY.md",
+  "englishTranslationBehavior": "replace"
 }

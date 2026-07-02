@@ -19,6 +19,12 @@ interface OntologySnapshot {
   frontmatterTags: string[];
   /** Frontmatter key-value pairs to preserve across rewrites. */
   preservedFrontmatter: Record<string, unknown>;
+  /** All @handles found in the original body text. */
+  handles: string[];
+  /** All markdown links or external URLs. */
+  externalLinks: string[];
+  /** All images/attachments markup. */
+  images: string[];
 }
 
 const PILLARS = [
@@ -35,8 +41,8 @@ const REFINER_SYSTEM_PROMPT = `你是一位專業的知識精修與摘要引擎�
 
 1. 標題優化（TITLE）：評估原始標題是否與內容高度相關。如果無關或是無意義名稱，請根據內容給出一個20字以內的新繁體中文標題。如果原始標題包含日期資訊（如 2026-04-17），必須保留於新標題中。若原標題已經貼切貼於內容，請直接回傳原標題。
 2. 原文關鍵句摘錄（ORIGINAL_QUOTES）：從原始英文文本中挑選並「逐字摘錄」3 至 5 句最核心、最有節奏感且獨立成立的英文關鍵句。
-3. 關鍵詞彙（KEYWORDS）：提取技術用語（technical terms），並提供英文至繁體中文的詞彙對照表。如果原始文本已為中文，可略過此步或提供中文概念的英文譯詞。
-4. 重點提取（HIGHLIGHTS）：合併摘要跟重點提取，寫成一個重點提取。必須在 "highlights" 陣列的第一個元素放入對核心概念的簡潔總結（摘要，約一至二句話），隨後元素為謹挑選高價值、有實用性的段落或句子（重新清晰地改寫，去除所有樣板文本、冗餘內容 and 不必要的背景說明）。
+3. 關鍵詞彙對照表（KEYWORDS）：從文章中提取 3 至 5 個真實出現在文章中的專有名詞/技術用語（technical terms），並提供英文至繁體中文的詞彙對照表。絕對不可自創或組合原文中未曾出現的複合詞（例如，不可將文章中分開出現的 sustainable 與 artifact 融合成 sustainable artifact / 可持續性工件，必須是獨立出現且真實存在的詞彙）。
+4. 摘要與重點提取（HIGHLIGHTS）：合併摘要跟重點提取。必須在 "highlights" 陣列的第一個元素放入對核心概念的簡潔總結（摘要，約一至二句話，簡述文章核心論點）。隨後的元素為謹挑選高價值、有實用性的重點提取（3 至 5 點，忠於原文，不加入任何新資訊，去除所有樣板文本、冗餘內容及不必要的背景說明）。
 5. 催化問題（CATALYST_QUESTIONS）：生成 1 至 3 個緊扣文章範圍的催化思考問題。
    - 題目必須能只用這篇文章的內容回答，絕對不能要求使用者動用文章以外的產業知識或做開放式價值判斷（例如「我們是否投入過多資源」這種題目要淘汰）。
    - 題目形式優先用「如果應用在你的情境會怎樣」，而不是「你對這個現象的整體看法是什麼」。
@@ -60,8 +66,8 @@ const REFINER_SYSTEM_PROMPT = `你是一位專業的知識精修與摘要引擎�
   ],
   "highlights": [
     "對核心概念的一至二句話簡潔總結（摘要）",
-    "高價值段落 1...",
-    "高價值段落 2..."
+    "高價值重點 1...",
+    "高價值重點 2..."
   ],
   "catalystQuestions": [
     "如果你現在設計一個 agent prompt，靜態前綴要放哪些內容，才不會讓快取失效？",
@@ -82,12 +88,13 @@ const REFINER_SYSTEM_PROMPT = `你是一位專業的知識精修與摘要引擎�
    - 字數上限：每句不超過 40 字，避免摘錄整段。
    - 每句後面不附中文翻譯。
    - 必須挑選 3 到 5 句。
-4. 在選擇重點提取時要評選謹慎。如果整篇文本毫無價值，第一個元素放摘要後，其餘 highlights 可以為空。
+4. 重點提取規則：必須忠於原文，不加入摘要及文章以外的新資訊，數量限制 3 至 5 點。若整篇文本毫無價值，第一個元素放摘要後，其餘 highlights 可以為空。
 5. "catalystQuestions" 應為 1 到 3 個與文章內容緊扣的問題，用以啟發使用者將其應用於自身情境。
 6. 「關鍵詞彙」（中文部分）和「重點提取」中的所有文本必須為繁體中文（zh-TW）。
 7. 「反思（Reflection）」區塊為使用者手動維護區，系統僅生成區塊標題與格式骨架，不得填入任何內文，亦不得在 JSON 中輸出「反思」區塊的內容，違反此規則視為格式錯誤。
 8. 為了增加知識庫的關聯性，請參考輸入中提供的「知識庫現有標籤」列表。如果內容與現有標籤相關，請優先選用這些已存在的標籤。若現有標籤皆不適用，方可根據內容生成新的標籤。標籤格式須以「#」開頭。
-9. 請參考輸入中提供的「關聯筆記候選清單」。若在撰寫「重點提取」內容時提到候選清單中的概念或頁面，請使用雙層括號 '[[筆記名稱]]'（例如 [[Docker]]）進行雙向連結，建立知識網路。`;
+9. 請參考輸入中提供的「關聯筆記候選清單」。若在撰寫「重點提取」內容時提到候選清單中的概念或頁面，請使用雙層括號 '[[筆記名稱]]'（例如 [[Docker]]）進行雙向連結，建立知識網路。
+10. 關鍵詞彙對照表規則：只能使用文章中真實出現的詞，不可自創複合詞，數量限 3 到 5 個。`;
 
 const EVALUATE_AND_REFLECT_SYSTEM_PROMPT = `你是一位專業的知識分析與思維判讀引擎。
 你會收到：
@@ -104,15 +111,13 @@ const EVALUATE_AND_REFLECT_SYSTEM_PROMPT = `你是一位專業的知識分析與
    - 即使只有半句、字數很少，只要方向是「回應問題」而非「留白／無意義內容／純複製文章句子」，就算通過（passed 設為 true）。
    - 如果完全空白、純複製文章句子、或是回答與問題完全無關的胡言亂語，則判定不通過（passed 設為 false）。
 
-2. 生成反思（REFLECTION）：
-   - chineseReflection（中文完整反思）：根據使用者對催化問題的回答，結合文章內容，為使用者生成一段深度、完整的中文反思（約2-3句）。
-
-3. 自動決定拆解深度：
+2. 自動決定拆解深度：
    - 若 passed 為 true（通過）：
      - atomicNotes（原子化概念）：提取文章中高價值的獨立概念，並生成原子筆記。
-       【極重要規則】：你必須「直接把使用者對催化問題的回答」，作為原子筆記的開場定義句（第一句話），絕對不能重新用文章的話去寫！
+       【標題前綴規則】：標題（title）前綴可用「〔衍生〕」與原文直接內容做區分；數量對應文章實際的獨立子概念，不強行拆分。
+       【核心定義規則】：你必須「直接把使用者對催化問題的回答」，作為原子筆記的開場定義句（第一句話），絕對不能重新用文章的話去寫！
        在定義句之後，**必須增加更多概念拆解的條列化（Bullet points）部分**，使用無序列表（例如 \`- **核心要素/關鍵原則**：...\`）詳細條列拆解出該概念的核心要素、細分機制、運作步驟或具體場景。避免大段落文字，要條列分明以增強結構性與可讀性。
-     - relatedLinks（相關連結與原因）：分析使用者知識庫中可能關聯的筆記，列出相關連結並附上具體理由（包含推薦該關聯的原因）。格式為陣列，包含 { "noteName": "連結名稱", "reason": "推薦理由" }。
+     - relatedLinks（相關連結與原因）：分析使用者知識庫中可能關聯的筆記，列出相關連結並附上具體理由（包含推薦該關聯的原因）。格式為陣列，包含 { "noteName": "連結名稱", "reason": "推薦理由" }。找不出來理由則不得掛此連結。
    - 若 passed 為 false（沒通過）：
      - atomicNotes 必須為空陣列。
      - relatedLinks 必須為空陣列。
@@ -121,7 +126,6 @@ const EVALUATE_AND_REFLECT_SYSTEM_PROMPT = `你是一位專業的知識分析與
 預期的 JSON 結構：
 {
   "passed": true,
-  "chineseReflection": "基於您的回答與文章內容，...",
   "atomicNotes": [
     {
       "title": "概念名稱",
@@ -149,7 +153,6 @@ interface RefinerResult {
 
 interface Phase2Result {
   passed: boolean;
-  chineseReflection: string;
   atomicNotes: { title: string; content: string; tags: string[] }[];
   relatedLinks: { noteName: string; reason: string }[];
   lightweightLabel: string;
@@ -255,7 +258,6 @@ ${userAnswer || "（使用者跳過了回答，未提供思考痕跡）"}`;
 
       const parsedPhase2 = parseJsonFromLLM<Phase2Result>(rawPhase2Response) || {
         passed: false,
-        chineseReflection: "",
         atomicNotes: [],
         relatedLinks: [],
         lightweightLabel: "未通過思考痕跡判讀"
@@ -277,27 +279,14 @@ ${userAnswer || "（使用者跳過了回答，未提供思考痕跡）"}`;
       const originalQuotes = this.captureSection(originalContent, "原文關鍵句摘錄 (Original Quotes)");
 
       const defaultQuotes = `## 原文關鍵句摘錄 (Original Quotes)
-
-> "[英文原句，逐字摘錄，不改寫、不翻譯]"
-> — 出處段落關鍵字（例如：What a loop is actually made of）
-
-> ""
-> — 
+> "[英文原句，逐字摘錄]"
+> — [出處段落關鍵字]
 
 > ""
-> — 
+> — [出處段落關鍵字]
 
 > ""
-> — 
-
-<!--
-【規則】
-- 禁止改寫、簡化、翻譯此區塊句子——必須是原文逐字複製。
-- 挑選標準：句子本身要有獨立完整的意義（不能是「it changed everything」這種需要前後文才懂的句子）。
-- 優先挑選有節奏感、修辭手法（對仗、重複、反轉）的句子。
-- 每句後面不附中文翻譯。
-- 字數上限：每句不超過40字。
--->`;
+> — [出處段落關鍵字]`;
 
       let finalQuotes = "";
       if (this.isQuotesEmptyOrPlaceholder(originalQuotes)) {
@@ -469,35 +458,37 @@ ${userAnswer || "（使用者跳過了回答，未提供思考痕跡）"}`;
       parts.push(``);
     }
 
-    // 2. Highlights — first element is the 1-2 sentence summary, rest are bullet points
-    parts.push(`## 重點提取`);
+    // 2. Summary
+    parts.push(`## 摘要`);
     if (parsedPhase1.highlights && parsedPhase1.highlights.length > 0) {
-      // First element: summary sentence(s), rendered as a plain paragraph
       parts.push(parsedPhase1.highlights[0]);
       parts.push(``);
-
-      // Remaining elements: key points rendered as a bullet list
-      const bullets = parsedPhase1.highlights.slice(1);
-      if (bullets.length > 0) {
-        for (const hl of bullets) {
-          // Strip any leading bullet character the LLM may have added, then re-add
-          const cleaned = hl.replace(/^[-*]\s+/, "").trim();
-          if (cleaned) {
-            parts.push(`- ${cleaned}`);
-          }
-        }
-        parts.push(``);
-      }
     } else {
-      parts.push(`*（未發現特定有用段落）*`);
+      parts.push(`*（無摘要）*`);
       parts.push(``);
     }
 
-    // 3. Original Quotes Section (bridge between highlights and reflection)
+    // 3. Highlights
+    parts.push(`## 重點提取`);
+    if (parsedPhase1.highlights && parsedPhase1.highlights.length > 1) {
+      const bullets = parsedPhase1.highlights.slice(1);
+      for (const hl of bullets) {
+        const cleaned = hl.replace(/^[-*]\s+/, "").trim();
+        if (cleaned) {
+          parts.push(`- ${cleaned}`);
+        }
+      }
+      parts.push(``);
+    } else {
+      parts.push(`*（未發現特定重點）*`);
+      parts.push(``);
+    }
+
+    // 4. Original Quotes Section (bridge between highlights and reflection)
     parts.push(originalQuotesContent.trim());
     parts.push(``);
 
-    // 4. Reflection Section
+    // 5. Reflection Section
     parts.push(`## 反思 (Reflection)`);
     parts.push(``);
     if (questions && questions.length > 0) {
@@ -508,25 +499,15 @@ ${userAnswer || "（使用者跳過了回答，未提供思考痕跡）"}`;
       parts.push(``);
     }
 
-    parts.push(`**我的簡短回答：**`);
-    parts.push(userAnswer ? userAnswer.trim() : `（跳過回答）`);
+    parts.push(`**English (2-3 sentences, imperfect is fine, AI cannot ghostwrite):**`);
+    parts.push(`[使用者手動填寫，必須寫在中文回答之前]`);
     parts.push(``);
 
-    // English reflection placeholder (AI cannot ghostwrite, waiting for user to fill)
-    parts.push(`**English (2-3 sentences, AI cannot ghostwrite, waiting for you to fill):**`);
-    parts.push(``);
-    parts.push(``);
-
-    // Chinese reflection
-    parts.push(`**中文完整反思：**`);
-    if (parsedPhase2 && parsedPhase2.chineseReflection) {
-      parts.push(parsedPhase2.chineseReflection.trim());
-    } else {
-      parts.push(`*（無中文反思生成）*`);
-    }
+    parts.push(`**中文簡短回答：**`);
+    parts.push(userAnswer ? userAnswer.trim() : `[使用者手動填寫，緊接英文延伸即可，不需重新完整組織一次邏輯；AI不可在此欄位後方另加詮釋、讚美或重寫使用者的回答]`);
     parts.push(``);
 
-    // 5. If passed, add Atomic Links and Related Links
+    // 6. If passed, add Atomic Links and Related Links
     if (parsedPhase2 && parsedPhase2.passed) {
       if (atomicLinks.length > 0) {
         parts.push(`## 原子化概念筆記`);
@@ -537,13 +518,16 @@ ${userAnswer || "（使用者跳過了回答，未提供思考痕跡）"}`;
       }
 
       if (parsedPhase2.relatedLinks && parsedPhase2.relatedLinks.length > 0) {
-        parts.push(`## 相關筆記`);
-        for (const link of parsedPhase2.relatedLinks) {
-          if (link.noteName) {
-            parts.push(`- [[${link.noteName}]] ${link.reason ? `(原因：${link.reason})` : ""}`);
+        const validLinks = parsedPhase2.relatedLinks.filter(
+          link => link.noteName && link.reason && link.reason.trim()
+        );
+        if (validLinks.length > 0) {
+          parts.push(`## 相關筆記`);
+          for (const link of validLinks) {
+            parts.push(`- [[${link.noteName}]]（理由：${link.reason.trim()}）`);
           }
+          parts.push(``);
         }
-        parts.push(``);
       }
     } else if (parsedPhase2 && parsedPhase2.lightweightLabel) {
       // If failed, add lightweight label
@@ -663,6 +647,40 @@ ${data.content}
       inlineTags.push(m[1]);
     }
 
+    // Extract @handles: (e.g. @username)
+    const handleRegex = /(?:^|\s)@([a-zA-Z0-9_\-\.]+)/g;
+    const handles: string[] = [];
+    while ((m = handleRegex.exec(body)) !== null) {
+      handles.push(m[0].trim());
+    }
+
+    // Extract markdown/Obsidian images: (e.g. ![[image.png]] or ![alt](url))
+    const images: string[] = [];
+    const mdImageRegex = /!\[([^\]]*)\]\(([^\)]+)\)/g;
+    while ((m = mdImageRegex.exec(body)) !== null) {
+      images.push(m[0].trim());
+    }
+    const obsidianImageRegex = /!\[\[([^\]]+)\]\]/g;
+    while ((m = obsidianImageRegex.exec(body)) !== null) {
+      images.push(m[0].trim());
+    }
+
+    // Extract markdown external links: (e.g. [text](url))
+    const externalLinks: string[] = [];
+    const mdLinkRegex = /(?<!!)\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g;
+    while ((m = mdLinkRegex.exec(body)) !== null) {
+      externalLinks.push(m[0].trim());
+    }
+
+    // Extract raw URLs (not inside markdown links/images):
+    const rawUrlRegex = /(?<!\()https?:\/\/[^\s\)]+(?!\))/g;
+    while ((m = rawUrlRegex.exec(body)) !== null) {
+      const url = m[0].trim();
+      if (!externalLinks.some(link => link.includes(url)) && !images.some(img => img.includes(url))) {
+        externalLinks.push(url);
+      }
+    }
+
     // Extract frontmatter tags and all preserved properties
     const fmMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
     const frontmatterTags: string[] = [];
@@ -710,15 +728,18 @@ ${data.content}
       inlineTags: Array.from(new Set(inlineTags)),
       frontmatterTags: Array.from(new Set(frontmatterTags)),
       preservedFrontmatter,
+      handles: Array.from(new Set(handles)),
+      externalLinks: Array.from(new Set(externalLinks)),
+      images: Array.from(new Set(images)),
     };
   }
 
   /**
-   * Re-inject any wikilinks and inline tags that existed in the original
+   * Re-inject any wikilinks, tags, @handles, external links, and images that existed in the original
    * note but are absent from the LLM-rewritten body.
    */
   private restoreOntology(refinedBody: string, ontology: OntologySnapshot): string {
-    // Find which original wikilinks are missing from the new content
+    // Find missing elements
     const missingLinks: string[] = [];
     for (const link of ontology.wikilinks) {
       if (!refinedBody.includes(`[[${link}`)) {
@@ -726,7 +747,6 @@ ${data.content}
       }
     }
 
-    // Find which original inline tags are missing
     const missingTags: string[] = [];
     for (const tag of ontology.inlineTags) {
       if (!refinedBody.includes(`#${tag}`)) {
@@ -734,8 +754,36 @@ ${data.content}
       }
     }
 
+    const missingHandles: string[] = [];
+    for (const handle of ontology.handles) {
+      if (!refinedBody.includes(handle)) {
+        missingHandles.push(handle);
+      }
+    }
+
+    const missingExtLinks: string[] = [];
+    for (const link of ontology.externalLinks) {
+      if (!refinedBody.includes(link)) {
+        missingExtLinks.push(link);
+      }
+    }
+
+    const missingImages: string[] = [];
+    for (const img of ontology.images) {
+      if (!refinedBody.includes(img)) {
+        missingImages.push(img);
+      }
+    }
+
+    const hasMissingOntology = 
+      missingLinks.length > 0 || 
+      missingTags.length > 0 || 
+      missingHandles.length > 0 || 
+      missingExtLinks.length > 0 || 
+      missingImages.length > 0;
+
     // If nothing is missing, return as-is
-    if (missingLinks.length === 0 && missingTags.length === 0) {
+    if (!hasMissingOntology) {
       return refinedBody;
     }
 
@@ -746,10 +794,24 @@ ${data.content}
     parts.push("> 以下連結與標籤來自原始筆記，由系統自動保留以維護知識圖譜完整性。");
     parts.push("");
 
-    if (missingLinks.length > 0) {
+    const allMissingLinks: string[] = [];
+    for (const link of missingLinks) {
+      allMissingLinks.push(`- [[${link}]]`);
+    }
+    for (const handle of missingHandles) {
+      allMissingLinks.push(`- ${handle}`);
+    }
+    for (const link of missingExtLinks) {
+      allMissingLinks.push(`- ${link}`);
+    }
+    for (const img of missingImages) {
+      allMissingLinks.push(`- ${img}`);
+    }
+
+    if (allMissingLinks.length > 0) {
       parts.push("**保留的雙向連結（Preserved Wikilinks）：**");
-      for (const link of missingLinks) {
-        parts.push(`- [[${link}]]`);
+      for (const item of allMissingLinks) {
+        parts.push(item);
       }
       parts.push("");
     }
@@ -918,14 +980,6 @@ ${data.content}
         parts.push("");
       }
     }
-    parts.push(`<!--
-【規則】
-- 禁止改寫、簡化、翻譯此區塊句子——必須是原文逐字複製。
-- 挑選標準：句子本身要有獨立完整的意義（不能是「it changed everything」這種需要前後文才懂的句子）。
-- 優先挑選有節奏感、修辭手法（對仗、重複、反轉）的句子。
-- 每句後面不附中文翻譯。
-- 字數上限：每句不超過40字。
--->`);
     return parts.join("\n");
   }
 
