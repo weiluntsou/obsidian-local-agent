@@ -232,7 +232,7 @@ export class NoteRefinerEngine {
       );
 
       // Prompt user with catalyst questions (blocks refinement flow until resolved)
-      const userAnswer = await catalyst.promptUser(file.basename, questions);
+      const userAnswer = await catalyst.promptUser(file.basename, parsed.highlights, questions);
 
       new Notice("🧠 正在判讀思考痕跡並決定拆解深度...");
 

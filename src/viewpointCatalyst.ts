@@ -18,24 +18,96 @@ import { App, Modal, Notice, Setting, TFile } from "obsidian";
 import { LocalLLMClient } from "./api";
 
 class ReflectionModal extends Modal {
+  private highlights: string[];
   private questions: string[];
   private userInput: string = "";
   private onSubmit: (result: string | null) => void;
   private noteTitle: string;
+  private currentStep: "summary" | "reflection" = "summary";
+  private onSubmitCalled: boolean = false;
 
   constructor(
     app: App,
     noteTitle: string,
+    highlights: string[],
     questions: string[],
     onSubmit: (result: string | null) => void
   ) {
     super(app);
     this.noteTitle = noteTitle;
+    this.highlights = highlights;
     this.questions = questions;
     this.onSubmit = onSubmit;
   }
 
+  private triggerSubmit(result: string | null) {
+    if (!this.onSubmitCalled) {
+      this.onSubmitCalled = true;
+      this.onSubmit(result);
+    }
+  }
+
   onOpen(): void {
+    this.render();
+  }
+
+  render(): void {
+    const { contentEl } = this;
+    contentEl.empty();
+
+    if (this.currentStep === "summary") {
+      this.renderSummary();
+    } else {
+      this.renderReflection();
+    }
+  }
+
+  renderSummary(): void {
+    const { contentEl } = this;
+
+    contentEl.createEl("h2", { text: `📝 閱讀摘要 — ${this.noteTitle}` });
+    contentEl.createEl("p", {
+      text: "請先閱讀以下精修摘要與重點提取，確認理解後再進行反思。",
+      cls: "setting-item-description",
+    });
+
+    const highlightsDiv = contentEl.createDiv({ cls: "catalyst-highlights" });
+    highlightsDiv.style.background = "var(--background-secondary)";
+    highlightsDiv.style.padding = "12px 16px";
+    highlightsDiv.style.borderRadius = "8px";
+    highlightsDiv.style.marginBottom = "16px";
+    highlightsDiv.style.maxHeight = "300px";
+    highlightsDiv.style.overflowY = "auto";
+    highlightsDiv.style.borderLeft = "4px solid var(--interactive-accent)";
+
+    for (const highlight of this.highlights) {
+      if (highlight && highlight.trim()) {
+        highlightsDiv.createEl("p", {
+          text: highlight.trim(),
+          cls: "catalyst-highlight-item",
+        });
+      }
+    }
+
+    const buttonContainer = contentEl.createDiv({
+      cls: "catalyst-button-container",
+    });
+    buttonContainer.style.display = "flex";
+    buttonContainer.style.justifyContent = "flex-end";
+    buttonContainer.style.gap = "8px";
+    buttonContainer.style.marginTop = "8px";
+
+    const nextBtn = buttonContainer.createEl("button", {
+      text: "我已讀完，開始反思",
+      cls: "mod-cta",
+    });
+    nextBtn.addEventListener("click", () => {
+      this.currentStep = "reflection";
+      this.render();
+    });
+  }
+
+  renderReflection(): void {
     const { contentEl } = this;
 
     contentEl.createEl("h2", { text: "🧠 觀點催化器 — 個人反思" });
@@ -73,6 +145,7 @@ class ReflectionModal extends Modal {
           "placeholder",
           "寫下你的簡短回答（可使用不完整句子、碎句、半句）..."
         );
+        text.setValue(this.userInput);
         text.onChange((value) => {
           this.userInput = value;
         });
@@ -87,10 +160,16 @@ class ReflectionModal extends Modal {
     buttonContainer.style.gap = "8px";
     buttonContainer.style.marginTop = "8px";
 
+    const prevBtn = buttonContainer.createEl("button", { text: "返回摘要" });
+    prevBtn.addEventListener("click", () => {
+      this.currentStep = "summary";
+      this.render();
+    });
+
     const skipBtn = buttonContainer.createEl("button", { text: "跳過反思" });
     skipBtn.addEventListener("click", () => {
+      this.triggerSubmit(null);
       this.close();
-      this.onSubmit(null);
     });
 
     const submitBtn = buttonContainer.createEl("button", {
@@ -98,12 +177,13 @@ class ReflectionModal extends Modal {
       cls: "mod-cta",
     });
     submitBtn.addEventListener("click", () => {
+      this.triggerSubmit(this.userInput.trim());
       this.close();
-      this.onSubmit(this.userInput.trim());
     });
   }
 
   onClose(): void {
+    this.triggerSubmit(null);
     const { contentEl } = this;
     contentEl.empty();
   }
@@ -124,14 +204,16 @@ export class ViewpointCatalyst {
    * Show modal to prompt user for catalyst question responses.
    * 
    * @param noteTitle The note title.
+   * @param highlights The pre-generated highlights summary list.
    * @param questions The pre-generated questions list.
    * @returns The user's input string, or null if skipped.
    */
-  async promptUser(noteTitle: string, questions: string[]): Promise<string | null> {
+  async promptUser(noteTitle: string, highlights: string[], questions: string[]): Promise<string | null> {
     return new Promise<string | null>((resolve) => {
       const modal = new ReflectionModal(
         this.app,
         noteTitle,
+        highlights,
         questions,
         (reflection: string | null) => {
           resolve(reflection);

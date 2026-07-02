@@ -426,14 +426,74 @@ var import_obsidian7 = require("obsidian");
 // src/viewpointCatalyst.ts
 var import_obsidian4 = require("obsidian");
 var ReflectionModal = class extends import_obsidian4.Modal {
-  constructor(app, noteTitle, questions, onSubmit) {
+  constructor(app, noteTitle, highlights, questions, onSubmit) {
     super(app);
     this.userInput = "";
+    this.currentStep = "summary";
+    this.onSubmitCalled = false;
     this.noteTitle = noteTitle;
+    this.highlights = highlights;
     this.questions = questions;
     this.onSubmit = onSubmit;
   }
+  triggerSubmit(result) {
+    if (!this.onSubmitCalled) {
+      this.onSubmitCalled = true;
+      this.onSubmit(result);
+    }
+  }
   onOpen() {
+    this.render();
+  }
+  render() {
+    const { contentEl } = this;
+    contentEl.empty();
+    if (this.currentStep === "summary") {
+      this.renderSummary();
+    } else {
+      this.renderReflection();
+    }
+  }
+  renderSummary() {
+    const { contentEl } = this;
+    contentEl.createEl("h2", { text: `\u{1F4DD} \u95B1\u8B80\u6458\u8981 \u2014 ${this.noteTitle}` });
+    contentEl.createEl("p", {
+      text: "\u8ACB\u5148\u95B1\u8B80\u4EE5\u4E0B\u7CBE\u4FEE\u6458\u8981\u8207\u91CD\u9EDE\u63D0\u53D6\uFF0C\u78BA\u8A8D\u7406\u89E3\u5F8C\u518D\u9032\u884C\u53CD\u601D\u3002",
+      cls: "setting-item-description"
+    });
+    const highlightsDiv = contentEl.createDiv({ cls: "catalyst-highlights" });
+    highlightsDiv.style.background = "var(--background-secondary)";
+    highlightsDiv.style.padding = "12px 16px";
+    highlightsDiv.style.borderRadius = "8px";
+    highlightsDiv.style.marginBottom = "16px";
+    highlightsDiv.style.maxHeight = "300px";
+    highlightsDiv.style.overflowY = "auto";
+    highlightsDiv.style.borderLeft = "4px solid var(--interactive-accent)";
+    for (const highlight of this.highlights) {
+      if (highlight && highlight.trim()) {
+        highlightsDiv.createEl("p", {
+          text: highlight.trim(),
+          cls: "catalyst-highlight-item"
+        });
+      }
+    }
+    const buttonContainer = contentEl.createDiv({
+      cls: "catalyst-button-container"
+    });
+    buttonContainer.style.display = "flex";
+    buttonContainer.style.justifyContent = "flex-end";
+    buttonContainer.style.gap = "8px";
+    buttonContainer.style.marginTop = "8px";
+    const nextBtn = buttonContainer.createEl("button", {
+      text: "\u6211\u5DF2\u8B80\u5B8C\uFF0C\u958B\u59CB\u53CD\u601D",
+      cls: "mod-cta"
+    });
+    nextBtn.addEventListener("click", () => {
+      this.currentStep = "reflection";
+      this.render();
+    });
+  }
+  renderReflection() {
     const { contentEl } = this;
     contentEl.createEl("h2", { text: "\u{1F9E0} \u89C0\u9EDE\u50AC\u5316\u5668 \u2014 \u500B\u4EBA\u53CD\u601D" });
     contentEl.createEl("p", {
@@ -462,6 +522,7 @@ var ReflectionModal = class extends import_obsidian4.Modal {
         "placeholder",
         "\u5BEB\u4E0B\u4F60\u7684\u7C21\u77ED\u56DE\u7B54\uFF08\u53EF\u4F7F\u7528\u4E0D\u5B8C\u6574\u53E5\u5B50\u3001\u788E\u53E5\u3001\u534A\u53E5\uFF09..."
       );
+      text.setValue(this.userInput);
       text.onChange((value) => {
         this.userInput = value;
       });
@@ -473,21 +534,27 @@ var ReflectionModal = class extends import_obsidian4.Modal {
     buttonContainer.style.justifyContent = "flex-end";
     buttonContainer.style.gap = "8px";
     buttonContainer.style.marginTop = "8px";
+    const prevBtn = buttonContainer.createEl("button", { text: "\u8FD4\u56DE\u6458\u8981" });
+    prevBtn.addEventListener("click", () => {
+      this.currentStep = "summary";
+      this.render();
+    });
     const skipBtn = buttonContainer.createEl("button", { text: "\u8DF3\u904E\u53CD\u601D" });
     skipBtn.addEventListener("click", () => {
+      this.triggerSubmit(null);
       this.close();
-      this.onSubmit(null);
     });
     const submitBtn = buttonContainer.createEl("button", {
       text: "\u63D0\u4EA4\u53CD\u601D",
       cls: "mod-cta"
     });
     submitBtn.addEventListener("click", () => {
+      this.triggerSubmit(this.userInput.trim());
       this.close();
-      this.onSubmit(this.userInput.trim());
     });
   }
   onClose() {
+    this.triggerSubmit(null);
     const { contentEl } = this;
     contentEl.empty();
   }
@@ -502,14 +569,16 @@ var ViewpointCatalyst = class {
    * Show modal to prompt user for catalyst question responses.
    * 
    * @param noteTitle The note title.
+   * @param highlights The pre-generated highlights summary list.
    * @param questions The pre-generated questions list.
    * @returns The user's input string, or null if skipped.
    */
-  async promptUser(noteTitle, questions) {
+  async promptUser(noteTitle, highlights, questions) {
     return new Promise((resolve) => {
       const modal = new ReflectionModal(
         this.app,
         noteTitle,
+        highlights,
         questions,
         (reflection) => {
           resolve(reflection);
@@ -1188,7 +1257,7 @@ ${bodyContent}${existingTagsContext}${relatedContext}`;
         this.apiClient,
         this.temperature
       );
-      const userAnswer = await catalyst.promptUser(file.basename, questions);
+      const userAnswer = await catalyst.promptUser(file.basename, parsed.highlights, questions);
       new import_obsidian7.Notice("\u{1F9E0} \u6B63\u5728\u5224\u8B80\u601D\u8003\u75D5\u8DE1\u4E26\u6C7A\u5B9A\u62C6\u89E3\u6DF1\u5EA6...");
       const phase2UserPrompt = `\u3010\u7B46\u8A18\u6A19\u984C\u3011\uFF1A${file.basename}
 \u3010\u6458\u8981\u8207\u91CD\u9EDE\u63D0\u53D6\u3011\uFF1A
